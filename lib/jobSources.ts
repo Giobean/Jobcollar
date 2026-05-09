@@ -193,6 +193,7 @@ const KNOWLEDGE_WORK_TITLE_TERMS = [
   "data scientist",
   "designer",
   "developer",
+  "engineer",
   "finance",
   "frontend",
   "legal",
@@ -203,6 +204,35 @@ const KNOWLEDGE_WORK_TITLE_TERMS = [
   "sales",
   "software",
   "technical writer"
+];
+const PRACTICAL_ROLE_TERMS = [
+  "alarm technician",
+  "assembler",
+  "automotive technician",
+  "battery service",
+  "caregiver",
+  "cdl",
+  "driver",
+  "electrician",
+  "equipment operator",
+  "field service",
+  "forklift",
+  "hvac",
+  "inspector",
+  "installer",
+  "machinist",
+  "maintenance",
+  "mechanic",
+  "millwright",
+  "nurse",
+  "operator",
+  "plumber",
+  "repair technician",
+  "service advisor",
+  "service technician",
+  "technician",
+  "warehouse",
+  "welder"
 ];
 
 const GREENHOUSE_BOARDS = [
@@ -499,7 +529,6 @@ function scoreAndCategorize(job: RawJob): AggregatedJob | null {
   const titleText = `${job.title} ${job.tags.join(" ")} ${job.employmentType}`.toLowerCase();
   const text = searchableText(job);
   const titleLooksHandsOn = HANDS_ON_TITLE_TERMS.some((term) => titleText.includes(term));
-  const titleLooksKnowledgeWork = KNOWLEDGE_WORK_TITLE_TERMS.some((term) => titleText.includes(term));
   const categoryScores = Object.entries(TRADE_KEYWORDS).map(([name, keywords]) => ({
     name,
     score:
@@ -508,7 +537,7 @@ function scoreAndCategorize(job: RawJob): AggregatedJob | null {
   }));
   const best = categoryScores.sort((a, b) => b.score - a.score)[0];
 
-  if (!best || best.score === 0 || !titleLooksHandsOn || titleLooksKnowledgeWork) {
+  if (!best || best.score === 0 || !titleLooksHandsOn || isKnowledgeOnlyTitle(titleText)) {
     return null;
   }
 
@@ -552,7 +581,7 @@ function matchesUserFilters(
     .filter((term) => term.length > 1);
   const text = searchableText(job);
 
-  return terms.every((term) => text.includes(term)) || text.includes(filters.q.toLowerCase());
+  return terms.every((term) => keywordHits(text, term) > 0) || keywordHits(text, filters.q.toLowerCase()) > 0;
 }
 
 function dedupeJobs(jobs: AggregatedJob[]): AggregatedJob[] {
@@ -615,6 +644,13 @@ function searchableText(job: Pick<AggregatedJob, "title" | "company" | "location
 function keywordHits(text: string, keyword: string): number {
   const escaped = keyword.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   return (text.match(new RegExp(`\\b${escaped}\\b`, "gi")) ?? []).length;
+}
+
+function isKnowledgeOnlyTitle(titleText: string): boolean {
+  const looksKnowledgeWork = KNOWLEDGE_WORK_TITLE_TERMS.some((term) => titleText.includes(term));
+  const hasPracticalRole = PRACTICAL_ROLE_TERMS.some((term) => titleText.includes(term));
+
+  return looksKnowledgeWork && !hasPracticalRole;
 }
 
 function stripHtml(value: string): string {
