@@ -37,11 +37,10 @@ export default function Home() {
   const [source, setSource] = useState("");
   const [remoteOnly, setRemoteOnly] = useState(false);
   const [data, setData] = useState<JobsResponse | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loadedRequestKey, setLoadedRequestKey] = useState("");
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    const controller = new AbortController();
+  const requestKey = useMemo(() => {
     const params = new URLSearchParams();
 
     if (query) params.set("q", query);
@@ -51,10 +50,13 @@ export default function Home() {
     if (remoteOnly) params.set("remote", "true");
     params.set("limit", "90");
 
-    setLoading(true);
-    setError("");
+    return params.toString();
+  }, [query, category, location, source, remoteOnly]);
 
-    fetch(`/api/jobs?${params.toString()}`, {
+  useEffect(() => {
+    const controller = new AbortController();
+
+    fetch(`/api/jobs?${requestKey}`, {
       signal: controller.signal,
       cache: "no-store"
     })
@@ -65,24 +67,25 @@ export default function Home() {
 
         return (await response.json()) as JobsResponse;
       })
-      .then((payload) => setData(payload))
+      .then((payload) => {
+        setData(payload);
+        setError("");
+        setLoadedRequestKey(requestKey);
+      })
       .catch((fetchError: unknown) => {
         if (fetchError instanceof DOMException && fetchError.name === "AbortError") {
           return;
         }
 
         setError(fetchError instanceof Error ? fetchError.message : "Unable to load jobs");
-      })
-      .finally(() => {
-        if (!controller.signal.aborted) {
-          setLoading(false);
-        }
+        setLoadedRequestKey(requestKey);
       });
 
     return () => controller.abort();
-  }, [query, category, location, source, remoteOnly]);
+  }, [requestKey]);
 
   const jobs = data?.jobs ?? [];
+  const loading = loadedRequestKey !== requestKey;
   const sourceLabel = useMemo(
     () => SOURCE_OPTIONS.find((item) => item.value === source)?.label ?? "All sources",
     [source]
