@@ -1,0 +1,6 @@
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+# Sync public job sources every 15 minutes. Logs stay local and SQLite removes
+# stale source listings when the worker sees they are no longer available.
+*/15 * * * * www-data cd /var/www/jobcollar && /usr/bin/python3 scripts/fetch_jobs.py >> /var/log/jobcollar-sync.log 2>&1

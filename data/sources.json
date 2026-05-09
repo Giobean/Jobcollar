@@ -1,0 +1,20 @@
+{
+  "expire_missing": true,
+  "sources": [
+    {
+      "id": "nyc_open_jobs",
+      "name": "NYC Citywide Jobs",
+      "type": "nyc_open_data",
+      "enabled": true,
+      "url": "https://data.cityofnewyork.us/resource/kpav-sd4t.json?$limit=1000&$order=posting_date%20DESC"
+    },
+    {
+      "id": "arbeitnow",
+      "name": "Arbeitnow Public Job Board",
+      "type": "arbeitnow",
+      "enabled": true,
+      "url": "https://www.arbeitnow.com/api/job-board-api",
+      "max_pages": 5
+    }
+  ]
+}
