@@ -192,15 +192,20 @@ const KNOWLEDGE_WORK_TITLE_TERMS = [
   "customer success",
   "data scientist",
   "designer",
+  "director",
   "developer",
   "engineer",
   "finance",
+  "head of",
   "frontend",
   "legal",
   "machine learning",
   "marketing",
+  "manager",
+  "operations manager",
   "product engineer",
   "product manager",
+  "program manager",
   "sales",
   "software",
   "technical writer"
@@ -528,11 +533,11 @@ async function fetchSmartRecruitersJobs(): Promise<SourceResult> {
 function scoreAndCategorize(job: RawJob): AggregatedJob | null {
   const titleText = `${job.title} ${job.tags.join(" ")} ${job.employmentType}`.toLowerCase();
   const text = searchableText(job);
-  const titleLooksHandsOn = HANDS_ON_TITLE_TERMS.some((term) => titleText.includes(term));
+  const titleLooksHandsOn = HANDS_ON_TITLE_TERMS.some((term) => termPresent(titleText, term));
   const categoryScores = Object.entries(TRADE_KEYWORDS).map(([name, keywords]) => ({
     name,
     score:
-      keywords.reduce((sum, keyword) => sum + keywordHits(titleText, keyword), 0) * 4 +
+      keywords.reduce((sum, keyword) => sum + keywordHits(titleText, keyword), 0) * 10 +
       keywords.reduce((sum, keyword) => sum + keywordHits(text, keyword), 0)
   }));
   const best = categoryScores.sort((a, b) => b.score - a.score)[0];
@@ -646,9 +651,13 @@ function keywordHits(text: string, keyword: string): number {
   return (text.match(new RegExp(`\\b${escaped}\\b`, "gi")) ?? []).length;
 }
 
+function termPresent(text: string, term: string): boolean {
+  return keywordHits(text, term) > 0;
+}
+
 function isKnowledgeOnlyTitle(titleText: string): boolean {
-  const looksKnowledgeWork = KNOWLEDGE_WORK_TITLE_TERMS.some((term) => titleText.includes(term));
-  const hasPracticalRole = PRACTICAL_ROLE_TERMS.some((term) => titleText.includes(term));
+  const looksKnowledgeWork = KNOWLEDGE_WORK_TITLE_TERMS.some((term) => termPresent(titleText, term));
+  const hasPracticalRole = PRACTICAL_ROLE_TERMS.some((term) => termPresent(titleText, term));
 
   return looksKnowledgeWork && !hasPracticalRole;
 }
