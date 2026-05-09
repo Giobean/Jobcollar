@@ -113,6 +113,18 @@ button {
   border-color: var(--line);
 }
 
+.post-job-btn {
+  background: var(--brand) !important;
+  border-color: var(--line) !important;
+  box-shadow: 3px 3px 0 var(--line);
+}
+
+.post-job-btn:hover {
+  background: #ffe066 !important;
+  transform: translate(-1px, -1px);
+  box-shadow: 4px 4px 0 var(--line);
+}
+
 .hero {
   align-items: stretch;
   display: grid;
@@ -191,16 +203,12 @@ button {
 }
 
 .board-shell {
-  display: grid;
-  gap: 22px;
-  grid-template-columns: minmax(0, 1fr) 342px;
   margin: 0 auto;
-  max-width: 1280px;
-  padding: 0 clamp(16px, 4vw, 56px) 72px;
+  max-width: 1080px;
+  padding: clamp(24px, 4vw, 48px) clamp(16px, 4vw, 56px) 72px;
 }
 
-.board-main,
-.sidebar {
+.board-main {
   min-width: 0;
 }
 
@@ -676,17 +684,9 @@ button {
 }
 
 @media (max-width: 1040px) {
-  .hero,
   .board-shell {
-    grid-template-columns: 1fr;
-  }
-
-  .hero-card {
-    min-height: 190px;
-  }
-
-  .sidebar {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    padding-left: 16px;
+    padding-right: 16px;
   }
 }
 
@@ -734,23 +734,16 @@ button {
     justify-self: start;
   }
 
-  .sidebar {
-    grid-template-columns: 1fr;
-  }
 }
 
 @media (max-width: 560px) {
-  .hero,
   .board-shell {
     padding-left: 12px;
     padding-right: 12px;
   }
 
-  .hero-copy,
-  .hero-card,
   .search-bar,
   .job-list,
-  .side-card,
   .state-card {
     box-shadow: 5px 5px 0 var(--line);
   }

@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import type { AggregatedJob, JobsResponse, JobSourceStatus } from "@/lib/jobSources";
+import type { AggregatedJob, JobsResponse } from "@/lib/jobSources";
 
 const TRADE_CATEGORIES = [
   "Electrical",
@@ -88,10 +88,6 @@ export default function Home() {
 
   const jobs = data?.jobs ?? [];
   const loading = loadedRequestKey !== requestKey;
-  const sourceLabel = useMemo(
-    () => SOURCE_OPTIONS.find((item) => item.value === source)?.label ?? "All sources",
-    [source]
-  );
 
   function submitSearch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -112,23 +108,6 @@ export default function Home() {
   return (
     <main>
       <SiteHeader />
-
-      <section className="hero">
-        <div className="hero-copy">
-          <p className="eyebrow">Live public job aggregation for AI-proof careers</p>
-          <h1>Skilled trade jobs, without the corporate maze.</h1>
-          <p>
-            JobCollar pulls real listings from public job feeds and organizes them for people who build, fix,
-            move, install, wire, weld, care, and keep the physical world running.
-          </p>
-        </div>
-
-        <div className="hero-card" aria-label="Live board status">
-          <span className="pulse" />
-          <strong>{loading ? "Refreshing feeds" : `${jobs.length} live matches`}</strong>
-          <span>{data ? `${data.stats.liveSources} sources online` : "Public sources connected"}</span>
-        </div>
-      </section>
 
       <section className="board-shell">
         <div className="board-main">
@@ -206,13 +185,11 @@ export default function Home() {
 
           <div className="board-toolbar">
             <div>
-              <strong>{loading ? "Loading live jobs..." : `${jobs.length} jobs found`}</strong>
+              <strong>{loading ? "Loading jobs..." : `${jobs.length} jobs`}</strong>
               <span>
                 {query || category || location || source
-                  ? ` Filtered by ${[query, category && formatCategory(category), location, sourceLabel !== "All sources" && sourceLabel]
-                      .filter(Boolean)
-                      .join(", ")}`
-                  : " Showing fresh skilled-career matches"}
+                  ? ` Filtered by ${[query, category && formatCategory(category), location, source].filter(Boolean).join(", ")}`
+                  : ""}
               </span>
             </div>
             <button className="text-button" onClick={clearFilters} type="button">
@@ -226,17 +203,6 @@ export default function Home() {
           {!error && !loading && jobs.length > 0 ? <JobList jobs={jobs} /> : null}
         </div>
 
-        <aside className="sidebar">
-          <SourcePanel sources={data?.sources ?? []} fetchedAt={data?.fetchedAt} />
-          <StatsPanel data={data} />
-          <div className="side-card">
-            <h2>Built for work AI cannot fake</h2>
-            <p>
-              We prioritize roles with hands-on skill, licensing, field judgment, patient care, logistics, and physical
-              infrastructure work.
-            </p>
-          </div>
-        </aside>
       </section>
     </main>
   );
@@ -254,8 +220,7 @@ function SiteHeader() {
       </a>
       <nav aria-label="Primary">
         <a href="#jobs">Jobs</a>
-        <a href="#sources">Sources</a>
-        <a href="mailto:hello@jobcollar.com">Post a job</a>
+        <a className="post-job-btn" href="mailto:hello@jobcollar.com">Post a job</a>
       </nav>
     </header>
   );
@@ -304,72 +269,6 @@ function JobList({ jobs }: { jobs: AggregatedJob[] }) {
   );
 }
 
-function SourcePanel({ sources, fetchedAt }: { sources: JobSourceStatus[]; fetchedAt?: string }) {
-  return (
-    <div className="side-card" id="sources">
-      <div className="side-heading">
-        <h2>Aggregator sources</h2>
-        <span>{fetchedAt ? relativeTime(fetchedAt) : "loading"}</span>
-      </div>
-      <div className="source-list">
-        {sources.length === 0
-          ? SOURCE_OPTIONS.filter((source) => source.value).map((source) => (
-              <div className="source-item" key={source.value}>
-                <span className="status-dot pending" />
-                <span>{source.label}</span>
-                <small>connecting</small>
-              </div>
-            ))
-          : sources.map((source) => (
-              <a className="source-item" href={source.url} key={source.id} target="_blank" rel="noreferrer">
-                <span className={source.ok ? "status-dot" : "status-dot down"} />
-                <span>{source.name}</span>
-                <small>{source.ok ? `${source.count} raw` : "offline"}</small>
-              </a>
-            ))}
-      </div>
-      <p className="fine-print">Listings link to original public job pages. JobCollar does not invent or repost jobs.</p>
-    </div>
-  );
-}
-
-function StatsPanel({ data }: { data: JobsResponse | null }) {
-  const categories = Object.entries(data?.stats.categories ?? {}).sort((a, b) => b[1] - a[1]);
-
-  return (
-    <div className="side-card">
-      <h2>Board pulse</h2>
-      <div className="stat-grid">
-        <Stat label="Live matches" value={data?.stats.total ?? "--"} />
-        <Stat label="Remote-capable" value={data?.stats.remote ?? "--"} />
-        <Stat label="Online feeds" value={data?.stats.liveSources ?? "--"} />
-        <Stat label="Trade lanes" value={categories.length || "--"} />
-      </div>
-      {categories.length > 0 ? (
-        <div className="mini-bars">
-          {categories.slice(0, 6).map(([name, count]) => (
-            <div key={name}>
-              <span>{formatCategory(name)}</span>
-              <div>
-                <i style={{ width: `${Math.max(12, (count / Math.max(data?.stats.total ?? 1, 1)) * 100)}%` }} />
-              </div>
-              <small>{count}</small>
-            </div>
-          ))}
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
-function Stat({ label, value }: { label: string; value: number | string }) {
-  return (
-    <div className="stat">
-      <strong>{value}</strong>
-      <span>{label}</span>
-    </div>
-  );
-}
 
 function LoadingRows() {
   return (
@@ -417,17 +316,3 @@ function postedMonth(value: string) {
   return Number.isNaN(date.valueOf()) ? "LIVE" : date.toLocaleDateString("en-US", { month: "short" });
 }
 
-function relativeTime(value: string) {
-  const date = new Date(value);
-  if (Number.isNaN(date.valueOf())) {
-    return "just now";
-  }
-
-  const minutes = Math.max(0, Math.round((Date.now() - date.valueOf()) / 60_000));
-  if (minutes < 1) return "just now";
-  if (minutes === 1) return "1 min ago";
-  if (minutes < 60) return `${minutes} mins ago`;
-
-  const hours = Math.round(minutes / 60);
-  return hours === 1 ? "1 hour ago" : `${hours} hours ago`;
-}
