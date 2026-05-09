@@ -25,7 +25,9 @@ const SOURCE_OPTIONS = [
   { value: "arbeitnow", label: "Arbeitnow" },
   { value: "remotive", label: "Remotive" },
   { value: "remoteok", label: "RemoteOK" },
-  { value: "themuse", label: "The Muse" }
+  { value: "themuse", label: "The Muse" },
+  { value: "greenhouse", label: "Company ATS" },
+  { value: "smartrecruiters", label: "Trade employer feeds" }
 ];
 
 export default function Home() {

@@ -1,4 +1,4 @@
-export type JobSourceId = "remotive" | "arbeitnow" | "remoteok" | "themuse";
+export type JobSourceId = "remotive" | "arbeitnow" | "remoteok" | "themuse" | "greenhouse" | "smartrecruiters";
 
 export type JobSourceStatus = {
   id: JobSourceId;
@@ -83,6 +83,16 @@ const SOURCE_META: Record<JobSourceId, Omit<JobSourceStatus, "count" | "ok" | "e
     id: "themuse",
     name: "The Muse",
     url: "https://www.themuse.com"
+  },
+  greenhouse: {
+    id: "greenhouse",
+    name: "Company ATS",
+    url: "https://www.greenhouse.com"
+  },
+  smartrecruiters: {
+    id: "smartrecruiters",
+    name: "Trade employer feeds",
+    url: "https://www.smartrecruiters.com"
   }
 };
 
@@ -91,7 +101,7 @@ const TRADE_KEYWORDS: Record<string, string[]> = {
   Plumbing: ["plumber", "plumbing", "pipefitter", "steamfitter", "sprinkler fitter"],
   HVAC: ["hvac", "refrigeration", "boiler", "chiller", "heating", "ventilation"],
   Welding: ["welder", "welding", "fabricator", "metal fabricator", "ironworker"],
-  Automotive: ["mechanic", "diesel", "automotive", "fleet", "collision", "body shop", "service advisor"],
+  Automotive: ["mechanic", "diesel", "automotive", "fleet", "collision", "body shop", "service advisor", "tire"],
   Construction: [
     "construction",
     "carpenter",
@@ -103,7 +113,18 @@ const TRADE_KEYWORDS: Record<string, string[]> = {
     "superintendent",
     "site lead"
   ],
-  Manufacturing: ["manufacturing", "machinist", "cnc", "machine operator", "assembler", "millwright", "maintenance"],
+  Manufacturing: [
+    "manufacturing",
+    "machinist",
+    "cnc",
+    "machine operator",
+    "assembler",
+    "millwright",
+    "maintenance",
+    "quality inspector",
+    "production coordinator",
+    "production technician"
+  ],
   FieldService: ["field service", "installer", "installation", "repair technician", "service technician", "maintenance technician"],
   Energy: ["solar", "wind", "battery", "utility", "renewable", "power plant", "oilfield", "gas technician"],
   Healthcare: ["nurse", "rn", "lpn", "cna", "caregiver", "medical assistant", "dental hygienist", "paramedic", "emt"],
@@ -127,6 +148,75 @@ const DEFAULT_SEARCH_TERMS = [
 ];
 
 const ALL_KEYWORDS = Object.values(TRADE_KEYWORDS).flat();
+const HANDS_ON_TITLE_TERMS = [
+  "apprentice",
+  "assembler",
+  "automotive",
+  "caregiver",
+  "carpenter",
+  "cdl",
+  "cnc",
+  "construction",
+  "custodian",
+  "driver",
+  "electrician",
+  "fabricator",
+  "field",
+  "forklift",
+  "foreman",
+  "hvac",
+  "inspector",
+  "installer",
+  "lineman",
+  "machinist",
+  "maintenance",
+  "manufacturing",
+  "mechanic",
+  "millwright",
+  "nurse",
+  "operator",
+  "plumber",
+  "production",
+  "quality",
+  "repair",
+  "service advisor",
+  "technician",
+  "warehouse",
+  "welder"
+];
+const KNOWLEDGE_WORK_TITLE_TERMS = [
+  "account executive",
+  "analytics engineer",
+  "backend",
+  "business development",
+  "customer success",
+  "data scientist",
+  "designer",
+  "developer",
+  "finance",
+  "frontend",
+  "legal",
+  "machine learning",
+  "marketing",
+  "product engineer",
+  "product manager",
+  "sales",
+  "software",
+  "technical writer"
+];
+
+const GREENHOUSE_BOARDS = [
+  { board: "andurilindustries", company: "Anduril Industries" },
+  { board: "redwoodmaterials", company: "Redwood Materials" }
+];
+
+const SMART_RECRUITERS_COMPANIES = [
+  "ChristianBrothersAutomotive",
+  "MonroInc",
+  "SonicAutomotive",
+  "BoschGroup",
+  "Sodexo"
+];
 
 export async function aggregateJobs(options: AggregateOptions): Promise<JobsResponse> {
   const q = clean(options.q ?? "");
@@ -141,7 +231,9 @@ export async function aggregateJobs(options: AggregateOptions): Promise<JobsResp
     fetchRemotiveJobs(searchTerms),
     fetchArbeitnowJobs(),
     fetchRemoteOkJobs(),
-    fetchMuseJobs(searchTerms)
+    fetchMuseJobs(searchTerms),
+    fetchGreenhouseJobs(),
+    fetchSmartRecruitersJobs()
   ];
 
   const results = await Promise.all(sourceFetchers);
@@ -322,20 +414,106 @@ async function fetchMuseJobs(searchTerms: string[]): Promise<SourceResult> {
   }
 }
 
+async function fetchGreenhouseJobs(): Promise<SourceResult> {
+  const id: JobSourceId = "greenhouse";
+  try {
+    const boards = await Promise.all(
+      GREENHOUSE_BOARDS.map(async ({ board, company }) => {
+        const data = await fetchJson<GreenhouseResponse>(
+          `https://boards-api.greenhouse.io/v1/boards/${board}/jobs?content=true`
+        );
+
+        return (data.jobs ?? []).map((job) => ({
+          externalId: `${board}-${job.id}`,
+          title: clean(job.title),
+          company,
+          source: id,
+          sourceName: SOURCE_META[id].name,
+          sourceUrl: SOURCE_META[id].url,
+          url: clean(job.absolute_url),
+          location: clean(job.location?.name) || "Location not listed",
+          remote: /remote/i.test(clean(job.location?.name)),
+          employmentType: uniqueStrings((job.departments ?? []).map((item) => item.name)).join(", ") || "Not listed",
+          salary: "",
+          postedAt: clean(job.updated_at),
+          tags: uniqueStrings([
+            ...(job.departments ?? []).map((item) => item.name),
+            ...(job.offices ?? []).map((item) => item.name)
+          ]),
+          description: stripHtml(clean(job.content))
+        }));
+      })
+    );
+
+    return { id, jobs: boards.flat().filter(hasRequiredFields) };
+  } catch (error) {
+    return failedSource(id, error);
+  }
+}
+
+async function fetchSmartRecruitersJobs(): Promise<SourceResult> {
+  const id: JobSourceId = "smartrecruiters";
+  try {
+    const companyPages = await Promise.all(
+      SMART_RECRUITERS_COMPANIES.map(async (company) => {
+        const data = await fetchJson<SmartRecruitersResponse>(
+          `https://api.smartrecruiters.com/v1/companies/${company}/postings?limit=100`
+        );
+
+        return (data.content ?? []).map((job) => ({
+          externalId: `${company}-${job.id}`,
+          title: clean(job.name),
+          company: clean(job.company?.name) || company,
+          source: id,
+          sourceName: SOURCE_META[id].name,
+          sourceUrl: SOURCE_META[id].url,
+          url: smartRecruitersPostingUrl(job),
+          location: clean(job.location?.fullLocation) || smartRecruitersLocation(job.location),
+          remote: Boolean(job.location?.remote || job.location?.hybrid),
+          employmentType: clean(job.typeOfEmployment?.label) || "Not listed",
+          salary: "",
+          postedAt: clean(job.releasedDate),
+          tags: uniqueStrings([
+            clean(job.industry?.label),
+            clean(job.department?.label),
+            clean(job.function?.label),
+            clean(job.experienceLevel?.label)
+          ]),
+          description: uniqueStrings([
+            clean(job.industry?.label),
+            clean(job.department?.label),
+            clean(job.typeOfEmployment?.label),
+            smartRecruitersLocation(job.location)
+          ]).join(" / ")
+        }));
+      })
+    );
+
+    return { id, jobs: companyPages.flat().filter(hasRequiredFields) };
+  } catch (error) {
+    return failedSource(id, error);
+  }
+}
+
 function scoreAndCategorize(job: RawJob): AggregatedJob | null {
+  const titleText = `${job.title} ${job.tags.join(" ")} ${job.employmentType}`.toLowerCase();
   const text = searchableText(job);
+  const titleLooksHandsOn = HANDS_ON_TITLE_TERMS.some((term) => titleText.includes(term));
+  const titleLooksKnowledgeWork = KNOWLEDGE_WORK_TITLE_TERMS.some((term) => titleText.includes(term));
   const categoryScores = Object.entries(TRADE_KEYWORDS).map(([name, keywords]) => ({
     name,
-    score: keywords.reduce((sum, keyword) => sum + keywordHits(text, keyword), 0)
+    score:
+      keywords.reduce((sum, keyword) => sum + keywordHits(titleText, keyword), 0) * 4 +
+      keywords.reduce((sum, keyword) => sum + keywordHits(text, keyword), 0)
   }));
   const best = categoryScores.sort((a, b) => b.score - a.score)[0];
 
-  if (!best || best.score === 0) {
+  if (!best || best.score === 0 || !titleLooksHandsOn || titleLooksKnowledgeWork) {
     return null;
   }
 
   const freshnessBoost = Math.max(0, 14 - daysOld(job.postedAt));
-  const sourceBoost = job.source === "arbeitnow" || job.source === "themuse" ? 3 : 1;
+  const sourceBoost = job.source === "greenhouse" || job.source === "smartrecruiters" ? 8 : 1;
   const score = best.score * 20 + freshnessBoost + sourceBoost + Math.min(job.tags.length, 8);
   const id = `${job.source}-${slugify(job.externalId || `${job.company}-${job.title}`)}`;
 
@@ -477,6 +655,30 @@ function formatSalary(min?: number, max?: number): string {
   return formatter.format(min ?? max ?? 0);
 }
 
+function smartRecruitersPostingUrl(job: SmartRecruitersJob): string {
+  const postingUrl = clean(job.postingUrl);
+  if (postingUrl) {
+    return postingUrl;
+  }
+
+  const company = clean(job.company?.identifier);
+  const id = clean(job.id);
+
+  if (!company || !id) {
+    return clean(job.ref);
+  }
+
+  return `https://jobs.smartrecruiters.com/${company}/${id}-${slugify(clean(job.name))}`;
+}
+
+function smartRecruitersLocation(location?: SmartRecruitersLocation): string {
+  if (!location) {
+    return "Location not listed";
+  }
+
+  return uniqueStrings([clean(location.city), clean(location.region), clean(location.country)]).join(", ");
+}
+
 function initials(company: string): string {
   return company
     .split(/\s+/)
@@ -597,6 +799,66 @@ type MuseResponse = {
       name: string;
     }>;
   }>;
+};
+
+type GreenhouseResponse = {
+  jobs?: Array<{
+    id: number | string;
+    title?: string;
+    absolute_url?: string;
+    updated_at?: string;
+    content?: string;
+    location?: {
+      name?: string;
+    };
+    departments?: Array<{
+      name: string;
+    }>;
+    offices?: Array<{
+      name: string;
+    }>;
+  }>;
+};
+
+type SmartRecruitersLocation = {
+  city?: string;
+  region?: string;
+  country?: string;
+  fullLocation?: string;
+  remote?: boolean;
+  hybrid?: boolean;
+};
+
+type SmartRecruitersJob = {
+  id?: string;
+  name?: string;
+  ref?: string;
+  postingUrl?: string;
+  releasedDate?: string;
+  company?: {
+    identifier?: string;
+    name?: string;
+  };
+  location?: SmartRecruitersLocation;
+  industry?: {
+    label?: string;
+  };
+  department?: {
+    label?: string;
+  };
+  function?: {
+    label?: string;
+  };
+  typeOfEmployment?: {
+    label?: string;
+  };
+  experienceLevel?: {
+    label?: string;
+  };
+};
+
+type SmartRecruitersResponse = {
+  content?: SmartRecruitersJob[];
 };
 
 export const tradeCategories = Object.keys(TRADE_KEYWORDS);
