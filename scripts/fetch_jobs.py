@@ -237,15 +237,40 @@ def classify_job(trades: dict[str, list[str]], title: str, description: str, tag
         return best[1], best[2]
 
     industry_terms = {
-        "Construction & Building Trades": ["construction", "building maintenance", "facility maintenance"],
-        "Manufacturing & Factory Jobs": ["manufacturing", "production", "factory", "assembly"],
-        "Transportation & Logistics": ["warehouse", "logistics", "freight", "driver"],
-        "Utilities & Energy": ["utility", "water treatment", "power plant", "energy"],
-        "Public Safety & Service": ["firefighter", "public safety", "custodian", "sanitation"],
+        "Construction & Building Trades": [
+            ("construction", "Construction laborer"),
+            ("building maintenance", "Construction laborer"),
+            ("facility maintenance", "Construction laborer"),
+        ],
+        "Manufacturing & Factory Jobs": [
+            ("manufacturing", "Factory worker"),
+            ("production", "Production technician"),
+            ("factory", "Factory worker"),
+            ("assembly", "Assembly line worker"),
+        ],
+        "Transportation & Logistics": [
+            ("warehouse", "Warehouse worker"),
+            ("logistics", "Logistics operator"),
+            ("freight", "Freight handler"),
+            ("driver", "Delivery driver"),
+        ],
+        "Utilities & Energy": [
+            ("utility", "Utility worker"),
+            ("water treatment", "Water treatment operator"),
+            ("power plant", "Plant operator"),
+            ("energy", "Utility worker"),
+        ],
+        "Public Safety & Service": [
+            ("firefighter", "Firefighter"),
+            ("public safety", "Security guard"),
+            ("custodian", "Custodian/janitor"),
+            ("sanitation", "Sanitation worker"),
+        ],
     }
     for category, terms in industry_terms.items():
-        if any(term in haystack for term in terms):
-            return category, terms[0].title()
+        for term, fallback_trade in terms:
+            if term in haystack:
+                return category, fallback_trade
 
     return None
 

@@ -1,0 +1,6 @@
+storage/*.sqlite
+storage/*.sqlite-*
+storage/*.db
+*.log
+__pycache__/
+*.pyc
