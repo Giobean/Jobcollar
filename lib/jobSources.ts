@@ -186,9 +186,12 @@ const HANDS_ON_TITLE_TERMS = [
 ];
 const KNOWLEDGE_WORK_TITLE_TERMS = [
   "account executive",
+  "analyst",
   "analytics engineer",
   "backend",
   "business development",
+  "business analyst",
+  "coordinator",
   "customer success",
   "data scientist",
   "designer",
@@ -205,6 +208,7 @@ const KNOWLEDGE_WORK_TITLE_TERMS = [
   "operations manager",
   "product engineer",
   "product manager",
+  "project coordinator",
   "program manager",
   "sales",
   "software",
