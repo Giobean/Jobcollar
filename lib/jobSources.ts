@@ -144,7 +144,25 @@ const DEFAULT_SEARCH_TERMS = [
   "cnc machinist",
   "cdl driver",
   "nurse",
-  "solar installer"
+  "solar installer",
+  "carpenter",
+  "diesel technician",
+  "forklift operator",
+  "warehouse",
+  "lineman",
+  "pipefitter",
+  "millwright",
+  "boiler technician",
+  "roofer",
+  "concrete",
+  "ironworker",
+  "elevator technician",
+  "fire alarm technician",
+  "caregiver",
+  "paramedic",
+  "dispatcher",
+  "installer",
+  "machine operator"
 ];
 
 const ALL_KEYWORDS = Object.values(TRADE_KEYWORDS).flat();
@@ -152,37 +170,67 @@ const HANDS_ON_TITLE_TERMS = [
   "apprentice",
   "assembler",
   "automotive",
+  "boiler",
   "caregiver",
   "carpenter",
   "cdl",
+  "chiller",
   "cnc",
+  "concrete",
   "construction",
   "custodian",
+  "diesel",
+  "dispatcher",
   "driver",
+  "drywall",
   "electrician",
+  "elevator",
+  "emt",
   "fabricator",
   "field",
+  "fire alarm",
   "forklift",
   "foreman",
+  "helper",
+  "home health",
   "hvac",
   "inspector",
   "installer",
+  "ironworker",
+  "journeyman",
+  "laborer",
   "lineman",
+  "lpn",
   "machinist",
   "maintenance",
   "manufacturing",
+  "mason",
   "mechanic",
+  "medical assistant",
   "millwright",
   "nurse",
   "operator",
+  "painter",
+  "paramedic",
+  "pipefitter",
   "plumber",
   "production",
   "quality",
+  "refrigeration",
   "repair",
+  "rigger",
+  "roofer",
+  "scaffolding",
   "service advisor",
+  "solar",
+  "sprinkler",
+  "steamfitter",
+  "superintendent",
   "technician",
+  "tire",
   "warehouse",
-  "welder"
+  "welder",
+  "winder"
 ];
 const KNOWLEDGE_WORK_TITLE_TERMS = [
   "account executive",
@@ -216,37 +264,78 @@ const KNOWLEDGE_WORK_TITLE_TERMS = [
 ];
 const PRACTICAL_ROLE_TERMS = [
   "alarm technician",
+  "apprentice",
   "assembler",
   "automotive technician",
   "battery service",
+  "boiler",
   "caregiver",
+  "carpenter",
   "cdl",
+  "concrete",
+  "construction",
+  "diesel",
   "driver",
   "electrician",
+  "elevator",
+  "emt",
   "equipment operator",
+  "fabricator",
   "field service",
   "forklift",
+  "home health",
   "hvac",
   "inspector",
   "installer",
+  "ironworker",
+  "journeyman",
+  "laborer",
+  "lineman",
+  "lpn",
   "machinist",
   "maintenance",
+  "mason",
   "mechanic",
+  "medical assistant",
   "millwright",
   "nurse",
   "operator",
+  "painter",
+  "paramedic",
+  "pipefitter",
   "plumber",
+  "refrigeration",
   "repair technician",
+  "rigger",
+  "roofer",
   "service advisor",
   "service technician",
+  "solar",
+  "sprinkler",
+  "superintendent",
   "technician",
+  "tire",
   "warehouse",
   "welder"
 ];
 
 const GREENHOUSE_BOARDS = [
   { board: "andurilindustries", company: "Anduril Industries" },
-  { board: "redwoodmaterials", company: "Redwood Materials" }
+  { board: "redwoodmaterials", company: "Redwood Materials" },
+  { board: "lucidmotors", company: "Lucid Motors" },
+  { board: "samsara", company: "Samsara" },
+  { board: "verkada", company: "Verkada" },
+  { board: "heartaerospace", company: "Heart Aerospace" },
+  { board: "chargepoint", company: "ChargePoint" },
+  { board: "hyliion", company: "Hyliion" },
+  { board: "silananotechnologies", company: "Sila Nanotechnologies" },
+  { board: "flexport", company: "Flexport" },
+  { board: "nuro", company: "Nuro" },
+  { board: "waymo", company: "Waymo" },
+  { board: "kodiak", company: "Kodiak Robotics" },
+  { board: "coreweave", company: "CoreWeave" },
+  { board: "bayada", company: "BAYADA Home Health Care" },
+  { board: "motional", company: "Motional" }
 ];
 
 const SMART_RECRUITERS_COMPANIES = [
@@ -254,7 +343,9 @@ const SMART_RECRUITERS_COMPANIES = [
   "MonroInc",
   "SonicAutomotive",
   "BoschGroup",
-  "Sodexo"
+  "Sodexo",
+  "Securitas",
+  "CINTASCorporation"
 ];
 
 export async function aggregateJobs(options: AggregateOptions): Promise<JobsResponse> {
@@ -263,7 +354,7 @@ export async function aggregateJobs(options: AggregateOptions): Promise<JobsResp
   const location = clean(options.location ?? "");
   const source = clean(options.source ?? "");
   const remote = Boolean(options.remote);
-  const limit = Math.min(Math.max(options.limit ?? 80, 1), 120);
+  const limit = Math.min(Math.max(options.limit ?? 300, 1), 1000);
   const searchTerms = q ? [q] : DEFAULT_SEARCH_TERMS;
 
   const sourceFetchers: Array<Promise<SourceResult>> = [
@@ -321,9 +412,9 @@ async function fetchRemotiveJobs(searchTerms: string[]): Promise<SourceResult> {
   const id: JobSourceId = "remotive";
   try {
     const jobsByTerm = await Promise.all(
-      searchTerms.slice(0, 8).map(async (term) => {
+      searchTerms.slice(0, 20).map(async (term) => {
         const data = await fetchJson<RemotiveResponse>(
-          `https://remotive.com/api/remote-jobs?search=${encodeURIComponent(term)}`
+          `https://remotive.com/api/remote-jobs?search=${encodeURIComponent(term)}&limit=50`
         );
 
         return (data.jobs ?? []).map((job) => ({
@@ -354,23 +445,30 @@ async function fetchRemotiveJobs(searchTerms: string[]): Promise<SourceResult> {
 async function fetchArbeitnowJobs(): Promise<SourceResult> {
   const id: JobSourceId = "arbeitnow";
   try {
-    const data = await fetchJson<ArbeitnowResponse>("https://www.arbeitnow.com/api/job-board-api");
-    const jobs = (data.data ?? []).map((job) => ({
-      externalId: clean(job.slug) || clean(job.url),
-      title: clean(job.title),
-      company: clean(job.company_name),
-      source: id,
-      sourceName: SOURCE_META[id].name,
-      sourceUrl: SOURCE_META[id].url,
-      url: clean(job.url),
-      location: clean(job.location) || (job.remote ? "Remote" : "Location not listed"),
-      remote: Boolean(job.remote),
-      employmentType: uniqueStrings(job.job_types ?? []).join(", ") || "Not listed",
-      salary: "",
-      postedAt: job.created_at ? new Date(job.created_at * 1000).toISOString() : "",
-      tags: uniqueStrings([...(job.tags ?? []), ...(job.job_types ?? [])]),
-      description: stripHtml(clean(job.description))
-    }));
+    const pages = await Promise.all(
+      [1, 2, 3, 4, 5].map((page) =>
+        fetchJson<ArbeitnowResponse>(`https://www.arbeitnow.com/api/job-board-api?page=${page}`)
+      )
+    );
+
+    const jobs = pages.flatMap((data) =>
+      (data.data ?? []).map((job) => ({
+        externalId: clean(job.slug) || clean(job.url),
+        title: clean(job.title),
+        company: clean(job.company_name),
+        source: id,
+        sourceName: SOURCE_META[id].name,
+        sourceUrl: SOURCE_META[id].url,
+        url: clean(job.url),
+        location: clean(job.location) || (job.remote ? "Remote" : "Location not listed"),
+        remote: Boolean(job.remote),
+        employmentType: uniqueStrings(job.job_types ?? []).join(", ") || "Not listed",
+        salary: "",
+        postedAt: job.created_at ? new Date(job.created_at * 1000).toISOString() : "",
+        tags: uniqueStrings([...(job.tags ?? []), ...(job.job_types ?? [])]),
+        description: stripHtml(clean(job.description))
+      }))
+    );
 
     return { id, jobs: jobs.filter(hasRequiredFields) };
   } catch (error) {
@@ -416,14 +514,16 @@ async function fetchRemoteOkJobs(): Promise<SourceResult> {
 async function fetchMuseJobs(searchTerms: string[]): Promise<SourceResult> {
   const id: JobSourceId = "themuse";
   try {
-    const museQueries = searchTerms.slice(0, 4);
-    const pages = await Promise.all(
-      museQueries.map((term) =>
+    const museQueries = searchTerms.slice(0, 12);
+    const requests = museQueries.flatMap((term) =>
+      [1, 2, 3].map((page) =>
         fetchJson<MuseResponse>(
-          `https://www.themuse.com/api/public/jobs?page=1&descending=true&search=${encodeURIComponent(term)}`
+          `https://www.themuse.com/api/public/jobs?page=${page}&descending=true&search=${encodeURIComponent(term)}`
         )
       )
     );
+
+    const pages = await Promise.all(requests);
 
     const jobs = pages.flatMap((page) =>
       (page.results ?? []).map((job) => ({
@@ -458,33 +558,38 @@ async function fetchGreenhouseJobs(): Promise<SourceResult> {
   try {
     const boards = await Promise.all(
       GREENHOUSE_BOARDS.map(async ({ board, company }) => {
-        const data = await fetchJson<GreenhouseResponse>(
-          `https://boards-api.greenhouse.io/v1/boards/${board}/jobs?content=true`
-        );
+        try {
+          const data = await fetchJson<GreenhouseResponse>(
+            `https://boards-api.greenhouse.io/v1/boards/${board}/jobs?content=true`
+          );
 
-        return (data.jobs ?? []).map((job) => ({
-          externalId: `${board}-${job.id}`,
-          title: clean(job.title),
-          company,
-          source: id,
-          sourceName: SOURCE_META[id].name,
-          sourceUrl: SOURCE_META[id].url,
-          url: clean(job.absolute_url),
-          location: clean(job.location?.name) || "Location not listed",
-          remote: /remote/i.test(clean(job.location?.name)),
-          employmentType: uniqueStrings((job.departments ?? []).map((item) => item.name)).join(", ") || "Not listed",
-          salary: "",
-          postedAt: clean(job.updated_at),
-          tags: uniqueStrings([
-            ...(job.departments ?? []).map((item) => item.name),
-            ...(job.offices ?? []).map((item) => item.name)
-          ]),
-          description: stripHtml(clean(job.content))
-        }));
+          return (data.jobs ?? []).map((job) => ({
+            externalId: `${board}-${job.id}`,
+            title: clean(job.title),
+            company,
+            source: id,
+            sourceName: SOURCE_META[id].name,
+            sourceUrl: SOURCE_META[id].url,
+            url: clean(job.absolute_url),
+            location: clean(job.location?.name) || "Location not listed",
+            remote: /remote/i.test(clean(job.location?.name)),
+            employmentType: uniqueStrings((job.departments ?? []).map((item) => item.name)).join(", ") || "Not listed",
+            salary: "",
+            postedAt: clean(job.updated_at),
+            tags: uniqueStrings([
+              ...(job.departments ?? []).map((item) => item.name),
+              ...(job.offices ?? []).map((item) => item.name)
+            ]),
+            description: stripHtml(clean(job.content))
+          }));
+        } catch {
+          return [];
+        }
       })
     );
 
-    return { id, jobs: boards.flat().filter(hasRequiredFields) };
+    const allJobs = boards.flat().filter(hasRequiredFields);
+    return { id, jobs: allJobs, error: allJobs.length === 0 ? "No boards responded" : undefined };
   } catch (error) {
     return failedSource(id, error);
   }
@@ -495,36 +600,40 @@ async function fetchSmartRecruitersJobs(): Promise<SourceResult> {
   try {
     const companyPages = await Promise.all(
       SMART_RECRUITERS_COMPANIES.map(async (company) => {
-        const data = await fetchJson<SmartRecruitersResponse>(
-          `https://api.smartrecruiters.com/v1/companies/${company}/postings?limit=100`
-        );
+        try {
+          const data = await fetchJson<SmartRecruitersResponse>(
+            `https://api.smartrecruiters.com/v1/companies/${company}/postings?limit=200`
+          );
 
-        return (data.content ?? []).map((job) => ({
-          externalId: `${company}-${job.id}`,
-          title: clean(job.name),
-          company: clean(job.company?.name) || company,
-          source: id,
-          sourceName: SOURCE_META[id].name,
-          sourceUrl: SOURCE_META[id].url,
-          url: smartRecruitersPostingUrl(job),
-          location: clean(job.location?.fullLocation) || smartRecruitersLocation(job.location),
-          remote: Boolean(job.location?.remote || job.location?.hybrid),
-          employmentType: clean(job.typeOfEmployment?.label) || "Not listed",
-          salary: "",
-          postedAt: clean(job.releasedDate),
-          tags: uniqueStrings([
-            clean(job.industry?.label),
-            clean(job.department?.label),
-            clean(job.function?.label),
-            clean(job.experienceLevel?.label)
-          ]),
-          description: uniqueStrings([
-            clean(job.industry?.label),
-            clean(job.department?.label),
-            clean(job.typeOfEmployment?.label),
-            smartRecruitersLocation(job.location)
-          ]).join(" / ")
-        }));
+          return (data.content ?? []).map((job) => ({
+            externalId: `${company}-${job.id}`,
+            title: clean(job.name),
+            company: clean(job.company?.name) || company,
+            source: id,
+            sourceName: SOURCE_META[id].name,
+            sourceUrl: SOURCE_META[id].url,
+            url: smartRecruitersPostingUrl(job),
+            location: clean(job.location?.fullLocation) || smartRecruitersLocation(job.location),
+            remote: Boolean(job.location?.remote || job.location?.hybrid),
+            employmentType: clean(job.typeOfEmployment?.label) || "Not listed",
+            salary: "",
+            postedAt: clean(job.releasedDate),
+            tags: uniqueStrings([
+              clean(job.industry?.label),
+              clean(job.department?.label),
+              clean(job.function?.label),
+              clean(job.experienceLevel?.label)
+            ]),
+            description: uniqueStrings([
+              clean(job.industry?.label),
+              clean(job.department?.label),
+              clean(job.typeOfEmployment?.label),
+              smartRecruitersLocation(job.location)
+            ]).join(" / ")
+          }));
+        } catch {
+          return [];
+        }
       })
     );
 
@@ -615,7 +724,7 @@ function dedupeJobs(jobs: AggregatedJob[]): AggregatedJob[] {
 
 async function fetchJson<T>(url: string, init: RequestInit = {}): Promise<T> {
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 8000);
+  const timeout = setTimeout(() => controller.abort(), 12000);
 
   try {
     const response = await fetch(url, {
