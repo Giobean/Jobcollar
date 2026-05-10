@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import type { AggregatedJob, JobsResponse } from "@/lib/jobSources";
 
 const TRADE_CATEGORIES = [
@@ -30,10 +30,66 @@ const SOURCE_OPTIONS = [
   { value: "smartrecruiters", label: "Trade employer feeds" }
 ];
 
+const LOCATION_OPTIONS = [
+  { value: "", label: "All locations" },
+  { value: "Remote", label: "Remote" },
+  { value: "Alabama", label: "Alabama" },
+  { value: "Alaska", label: "Alaska" },
+  { value: "Arizona", label: "Arizona" },
+  { value: "Arkansas", label: "Arkansas" },
+  { value: "California", label: "California" },
+  { value: "Colorado", label: "Colorado" },
+  { value: "Connecticut", label: "Connecticut" },
+  { value: "Delaware", label: "Delaware" },
+  { value: "Florida", label: "Florida" },
+  { value: "Georgia", label: "Georgia" },
+  { value: "Hawaii", label: "Hawaii" },
+  { value: "Idaho", label: "Idaho" },
+  { value: "Illinois", label: "Illinois" },
+  { value: "Indiana", label: "Indiana" },
+  { value: "Iowa", label: "Iowa" },
+  { value: "Kansas", label: "Kansas" },
+  { value: "Kentucky", label: "Kentucky" },
+  { value: "Louisiana", label: "Louisiana" },
+  { value: "Maine", label: "Maine" },
+  { value: "Maryland", label: "Maryland" },
+  { value: "Massachusetts", label: "Massachusetts" },
+  { value: "Michigan", label: "Michigan" },
+  { value: "Minnesota", label: "Minnesota" },
+  { value: "Mississippi", label: "Mississippi" },
+  { value: "Missouri", label: "Missouri" },
+  { value: "Montana", label: "Montana" },
+  { value: "Nebraska", label: "Nebraska" },
+  { value: "Nevada", label: "Nevada" },
+  { value: "New Hampshire", label: "New Hampshire" },
+  { value: "New Jersey", label: "New Jersey" },
+  { value: "New Mexico", label: "New Mexico" },
+  { value: "New York", label: "New York" },
+  { value: "North Carolina", label: "North Carolina" },
+  { value: "North Dakota", label: "North Dakota" },
+  { value: "Ohio", label: "Ohio" },
+  { value: "Oklahoma", label: "Oklahoma" },
+  { value: "Oregon", label: "Oregon" },
+  { value: "Pennsylvania", label: "Pennsylvania" },
+  { value: "Rhode Island", label: "Rhode Island" },
+  { value: "South Carolina", label: "South Carolina" },
+  { value: "South Dakota", label: "South Dakota" },
+  { value: "Tennessee", label: "Tennessee" },
+  { value: "Texas", label: "Texas" },
+  { value: "Utah", label: "Utah" },
+  { value: "Vermont", label: "Vermont" },
+  { value: "Virginia", label: "Virginia" },
+  { value: "Washington", label: "Washington" },
+  { value: "West Virginia", label: "West Virginia" },
+  { value: "Wisconsin", label: "Wisconsin" },
+  { value: "Wyoming", label: "Wyoming" }
+];
+
+const PAGE_SIZE = 30;
+
 export default function Home() {
   const [draftQuery, setDraftQuery] = useState("");
   const [query, setQuery] = useState("");
-  const [draftLocation, setDraftLocation] = useState("");
   const [location, setLocation] = useState("");
   const [category, setCategory] = useState("");
   const [source, setSource] = useState("");
@@ -41,6 +97,7 @@ export default function Home() {
   const [data, setData] = useState<JobsResponse | null>(null);
   const [loadedRequestKey, setLoadedRequestKey] = useState("");
   const [error, setError] = useState("");
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
   const requestKey = useMemo(() => {
     const params = new URLSearchParams();
@@ -50,7 +107,7 @@ export default function Home() {
     if (location) params.set("location", location);
     if (source) params.set("source", source);
     if (remoteOnly) params.set("remote", "true");
-    params.set("limit", "500");
+    params.set("limit", "1000");
 
     return params.toString();
   }, [query, category, location, source, remoteOnly]);
@@ -73,6 +130,7 @@ export default function Home() {
         setData(payload);
         setError("");
         setLoadedRequestKey(requestKey);
+        setVisibleCount(PAGE_SIZE);
       })
       .catch((fetchError: unknown) => {
         if (fetchError instanceof DOMException && fetchError.name === "AbortError") {
@@ -88,17 +146,21 @@ export default function Home() {
 
   const jobs = data?.jobs ?? [];
   const loading = loadedRequestKey !== requestKey;
+  const visibleJobs = jobs.slice(0, visibleCount);
+  const hasMore = visibleCount < jobs.length;
+
+  const loadMore = useCallback(() => {
+    setVisibleCount((prev) => prev + PAGE_SIZE);
+  }, []);
 
   function submitSearch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setQuery(draftQuery.trim());
-    setLocation(draftLocation.trim());
   }
 
   function clearFilters() {
     setDraftQuery("");
     setQuery("");
-    setDraftLocation("");
     setLocation("");
     setCategory("");
     setSource("");
@@ -122,11 +184,13 @@ export default function Home() {
             </label>
             <label>
               <span>Location</span>
-              <input
-                value={draftLocation}
-                onChange={(event) => setDraftLocation(event.target.value)}
-                placeholder="Dallas, Remote, Germany..."
-              />
+              <select value={location} onChange={(event) => setLocation(event.target.value)}>
+                {LOCATION_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
             </label>
             <label>
               <span>Source</span>
@@ -200,9 +264,19 @@ export default function Home() {
           {error ? <ErrorState message={error} /> : null}
           {!error && loading ? <LoadingRows /> : null}
           {!error && !loading && jobs.length === 0 ? <EmptyState /> : null}
-          {!error && !loading && jobs.length > 0 ? <JobList jobs={jobs} /> : null}
+          {!error && !loading && jobs.length > 0 ? (
+            <>
+              <JobList jobs={visibleJobs} />
+              {hasMore ? (
+                <div className="load-more-wrap">
+                  <button className="load-more-btn" onClick={loadMore} type="button">
+                    Show more jobs ({jobs.length - visibleCount} remaining)
+                  </button>
+                </div>
+              ) : null}
+            </>
+          ) : null}
         </div>
-
       </section>
     </main>
   );
@@ -220,7 +294,7 @@ function SiteHeader() {
       </a>
       <nav aria-label="Primary">
         <a href="#jobs">Jobs</a>
-        <a className="post-job-btn" href="mailto:hello@jobcollar.com">Post a job</a>
+        <a className="post-job-btn" href="/post">Post a job</a>
       </nav>
     </header>
   );
@@ -269,7 +343,6 @@ function JobList({ jobs }: { jobs: AggregatedJob[] }) {
   );
 }
 
-
 function LoadingRows() {
   return (
     <section className="job-list" aria-label="Loading jobs">
@@ -315,4 +388,3 @@ function postedMonth(value: string) {
   const date = new Date(value);
   return Number.isNaN(date.valueOf()) ? "LIVE" : date.toLocaleDateString("en-US", { month: "short" });
 }
-

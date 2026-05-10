@@ -631,6 +631,27 @@ button {
   height: 100%;
 }
 
+.load-more-wrap {
+  margin-top: 18px;
+  text-align: center;
+}
+
+.load-more-btn {
+  background: var(--brand);
+  border: 3px solid var(--line);
+  box-shadow: var(--shadow);
+  color: var(--ink);
+  font-size: 1rem;
+  font-weight: 950;
+  padding: 16px 32px;
+  text-transform: uppercase;
+}
+
+.load-more-btn:hover {
+  background: #ffe066;
+  transform: translate(-2px, -2px);
+}
+
 .state-card {
   background: #fff;
   border: 3px solid var(--line);
@@ -681,6 +702,137 @@ button {
   to {
     background-position-x: -220%;
   }
+}
+
+.post-shell {
+  margin: 0 auto;
+  max-width: 680px;
+  padding: clamp(32px, 5vw, 64px) clamp(16px, 4vw, 56px) 72px;
+}
+
+.post-hero {
+  margin-bottom: 32px;
+}
+
+.post-hero h1 {
+  font-size: clamp(2rem, 5vw, 3.4rem);
+  letter-spacing: -0.06em;
+  line-height: 1;
+  margin: 0;
+}
+
+.post-hero p {
+  color: var(--muted);
+  font-size: 1.1rem;
+  line-height: 1.5;
+  margin: 14px 0 0;
+}
+
+.post-form {
+  display: grid;
+  gap: 28px;
+}
+
+.form-section h2 {
+  font-size: 1.2rem;
+  letter-spacing: -0.03em;
+  margin: 0 0 16px;
+}
+
+.form-field {
+  display: block;
+  margin-bottom: 16px;
+}
+
+.form-field span {
+  display: block;
+  font-size: 0.82rem;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  margin-bottom: 6px;
+  text-transform: uppercase;
+}
+
+.form-field input {
+  background: #fff;
+  border: 3px solid var(--line);
+  min-height: 50px;
+  outline: none;
+  padding: 0 14px;
+  width: 100%;
+}
+
+.form-field input:focus {
+  border-color: var(--brand);
+}
+
+.price-card {
+  background: var(--panel);
+  border: 3px solid var(--line);
+  box-shadow: var(--shadow);
+  padding: 22px;
+}
+
+.price-line {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+}
+
+.price-line strong {
+  font-size: 1.6rem;
+  letter-spacing: -0.04em;
+}
+
+.price-perks {
+  color: var(--muted);
+  line-height: 1.7;
+  margin: 14px 0;
+  padding-left: 20px;
+}
+
+.price-total {
+  align-items: center;
+  border-top: 2px solid var(--line);
+  display: flex;
+  font-size: 1.1rem;
+  font-weight: 900;
+  justify-content: space-between;
+  padding-top: 14px;
+}
+
+.price-total strong {
+  font-size: 2rem;
+  letter-spacing: -0.05em;
+}
+
+.checkout-btn {
+  background: var(--brand);
+  border: 3px solid var(--line);
+  box-shadow: var(--shadow);
+  color: var(--ink);
+  font-size: 1.15rem;
+  font-weight: 950;
+  min-height: 58px;
+  text-transform: uppercase;
+  width: 100%;
+}
+
+.checkout-btn:hover:not(:disabled) {
+  background: #ffe066;
+  transform: translate(-2px, -2px);
+}
+
+.checkout-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.checkout-note {
+  color: var(--muted);
+  font-size: 0.85rem;
+  margin: 10px 0 0;
+  text-align: center;
 }
 
 @media (max-width: 1040px) {
