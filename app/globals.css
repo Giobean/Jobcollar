@@ -266,7 +266,7 @@ button {
   display: flex;
   gap: 12px;
   justify-content: space-between;
-  margin: 22px 0 12px;
+  margin: 8px 0 18px;
 }
 
 .quick-scroll,
@@ -310,7 +310,8 @@ button {
 }
 
 .category-strip {
-  margin-bottom: 18px;
+  margin-top: 22px;
+  margin-bottom: 4px;
 }
 
 .board-toolbar {

@@ -14,6 +14,7 @@ const TRADE_CATEGORIES = [
   "FieldService",
   "Energy",
   "Healthcare",
+  "Trucking",
   "Logistics",
   "Safety"
 ];
@@ -205,6 +206,21 @@ export default function Home() {
             <button type="submit">Find jobs</button>
           </form>
 
+          <div className="category-strip" aria-label="Trade categories">
+            <button className={!category ? "category-pill active" : "category-pill"} onClick={() => setCategory("")}>
+              All trades
+            </button>
+            {TRADE_CATEGORIES.map((item) => (
+              <button
+                key={item}
+                className={category === item ? "category-pill active" : "category-pill"}
+                onClick={() => setCategory(item)}
+              >
+                {formatCategory(item)}
+              </button>
+            ))}
+          </div>
+
           <div className="quick-row">
             <div className="quick-scroll" aria-label="Quick searches">
               {QUICK_SEARCHES.map((item) => (
@@ -230,21 +246,6 @@ export default function Home() {
               />
               Remote-capable only
             </label>
-          </div>
-
-          <div className="category-strip" aria-label="Trade categories">
-            <button className={!category ? "category-pill active" : "category-pill"} onClick={() => setCategory("")}>
-              All trades
-            </button>
-            {TRADE_CATEGORIES.map((item) => (
-              <button
-                key={item}
-                className={category === item ? "category-pill active" : "category-pill"}
-                onClick={() => setCategory(item)}
-              >
-                {formatCategory(item)}
-              </button>
-            ))}
           </div>
 
           <div className="board-toolbar">

@@ -128,7 +128,30 @@ const TRADE_KEYWORDS: Record<string, string[]> = {
   FieldService: ["field service", "installer", "installation", "repair technician", "service technician", "maintenance technician"],
   Energy: ["solar", "wind", "battery", "utility", "renewable", "power plant", "oilfield", "gas technician"],
   Healthcare: ["nurse", "rn", "lpn", "cna", "caregiver", "medical assistant", "dental hygienist", "paramedic", "emt"],
-  Logistics: ["cdl", "driver", "delivery", "warehouse", "forklift", "logistics", "dispatcher", "equipment operator"],
+  Trucking: [
+    "truck driver",
+    "cdl",
+    "otr",
+    "over the road",
+    "class a",
+    "class b",
+    "semi driver",
+    "tractor trailer",
+    "freight",
+    "long haul",
+    "local driver",
+    "regional driver",
+    "tanker driver",
+    "flatbed driver",
+    "reefer",
+    "dry van",
+    "ltl",
+    "linehaul",
+    "dockworker",
+    "yard jockey",
+    "trailer mechanic"
+  ],
+  Logistics: ["delivery", "warehouse", "forklift", "logistics", "dispatcher", "equipment operator", "shipping", "receiving"],
   Safety: ["fire alarm", "security technician", "alarm technician", "elevator", "inspection technician"]
 };
 
@@ -162,7 +185,15 @@ const DEFAULT_SEARCH_TERMS = [
   "paramedic",
   "dispatcher",
   "installer",
-  "machine operator"
+  "machine operator",
+  "truck driver",
+  "cdl driver class a",
+  "otr driver",
+  "freight driver",
+  "tanker driver",
+  "flatbed driver",
+  "local truck driver",
+  "regional truck driver"
 ];
 
 const ALL_KEYWORDS = Object.values(TRADE_KEYWORDS).flat();
@@ -226,11 +257,16 @@ const HANDS_ON_TITLE_TERMS = [
   "sprinkler",
   "steamfitter",
   "superintendent",
+  "tanker",
   "technician",
   "tire",
+  "tractor",
+  "truck",
+  "trucker",
   "warehouse",
   "welder",
-  "winder"
+  "winder",
+  "yard jockey"
 ];
 const KNOWLEDGE_WORK_TITLE_TERMS = [
   "account executive",
@@ -313,10 +349,15 @@ const PRACTICAL_ROLE_TERMS = [
   "solar",
   "sprinkler",
   "superintendent",
+  "tanker",
   "technician",
   "tire",
+  "tractor",
+  "truck",
+  "trucker",
   "warehouse",
-  "welder"
+  "welder",
+  "yard jockey"
 ];
 
 const GREENHOUSE_BOARDS = [
@@ -335,7 +376,11 @@ const GREENHOUSE_BOARDS = [
   { board: "kodiak", company: "Kodiak Robotics" },
   { board: "coreweave", company: "CoreWeave" },
   { board: "bayada", company: "BAYADA Home Health Care" },
-  { board: "motional", company: "Motional" }
+  { board: "motional", company: "Motional" },
+  { board: "uberfreight", company: "Uber Freight" },
+  { board: "gomotive", company: "Motive (KeepTruckin)" },
+  { board: "platformscience", company: "Platform Science" },
+  { board: "torcrobotics", company: "Torc Robotics" }
 ];
 
 const SMART_RECRUITERS_COMPANIES = [
@@ -345,7 +390,8 @@ const SMART_RECRUITERS_COMPANIES = [
   "BoschGroup",
   "Sodexo",
   "Securitas",
-  "CINTASCorporation"
+  "CINTASCorporation",
+  "SwiftTransportation"
 ];
 
 export async function aggregateJobs(options: AggregateOptions): Promise<JobsResponse> {
