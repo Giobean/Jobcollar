@@ -1,4 +1,4 @@
-export type JobSourceId = "remotive" | "arbeitnow" | "remoteok" | "themuse" | "greenhouse" | "smartrecruiters";
+export type JobSourceId = "remotive" | "arbeitnow" | "remoteok" | "themuse" | "greenhouse" | "smartrecruiters" | "nycgov";
 
 export type JobSourceStatus = {
   id: JobSourceId;
@@ -93,6 +93,11 @@ const SOURCE_META: Record<JobSourceId, Omit<JobSourceStatus, "count" | "ok" | "e
     id: "smartrecruiters",
     name: "Direct hire",
     url: "https://www.smartrecruiters.com"
+  },
+  nycgov: {
+    id: "nycgov",
+    name: "Government",
+    url: "https://www.nyc.gov/jobs"
   }
 };
 
@@ -416,7 +421,8 @@ export async function aggregateJobs(options: AggregateOptions): Promise<JobsResp
     fetchRemoteOkJobs(),
     fetchMuseJobs(searchTerms),
     fetchGreenhouseJobs(),
-    fetchSmartRecruitersJobs()
+    fetchSmartRecruitersJobs(),
+    fetchNYCGovJobs()
   ];
 
   const results = await Promise.all(sourceFetchers);
@@ -696,13 +702,78 @@ async function fetchSmartRecruitersJobs(): Promise<SourceResult> {
   }
 }
 
+async function fetchNYCGovJobs(): Promise<SourceResult> {
+  const id: JobSourceId = "nycgov";
+  try {
+    const tradeQuery = encodeURIComponent(
+      "business_title like '%Plumb%' OR business_title like '%Electric%' OR " +
+      "business_title like '%HVAC%' OR business_title like '%Mechanic%' OR " +
+      "business_title like '%Weld%' OR business_title like '%Maintenance%' OR " +
+      "business_title like '%Carpenter%' OR business_title like '%Driver%' OR " +
+      "business_title like '%Technician%' OR business_title like '%Boiler%' OR " +
+      "business_title like '%Elevator%' OR business_title like '%Fire Alarm%' OR " +
+      "business_title like '%Inspector%' OR business_title like '%Mason%'"
+    );
+    const data = await fetchJson<NycGovJob[]>(
+      `https://data.cityofnewyork.us/resource/kpav-sd4t.json?$limit=200&$where=${tradeQuery}`
+    );
+
+    const jobs = data.map((job) => ({
+      externalId: `nyc-${clean(job.job_id)}`,
+      title: clean(job.business_title),
+      company: clean(job.agency) || "City of New York",
+      source: id,
+      sourceName: SOURCE_META[id].name,
+      sourceUrl: SOURCE_META[id].url,
+      url: clean(job.job_posting_url) || `https://a127-jobs.nyc.gov/psc/nycjobs/EMPLOYEE/HRMS/c/HRS_HRAM_FL.HRS_CG_SEARCH_FL.GBL?Page=HRS_APP_JBPST_FL&Action=U&FOCUS=Applicant&SiteId=1&JobOpeningId=${clean(job.job_id)}`,
+      location: `New York, NY`,
+      remote: false,
+      employmentType: clean(job.full_time_part_time_indicator) === "F" ? "Full-time" : "Part-time",
+      salary: formatNycSalary(job.salary_range_from, job.salary_range_to),
+      postedAt: clean(job.posting_date) || new Date().toISOString(),
+      tags: uniqueStrings([clean(job.work_location), clean(job.job_category), "government", "benefits", "pension"]),
+      description: clean(job.job_description) ? stripHtml(clean(job.job_description)) : `${clean(job.business_title)} position with ${clean(job.agency)}. ${clean(job.minimum_qual_requirements) ? "Requirements: " + stripHtml(clean(job.minimum_qual_requirements)) : ""}`
+    }));
+
+    return { id, jobs: jobs.filter(hasRequiredFields) };
+  } catch (error) {
+    return failedSource(id, error);
+  }
+}
+
+function formatNycSalary(from?: string, to?: string): string {
+  if (!from && !to) return "";
+  const formatter = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
+  const min = Number(from);
+  const max = Number(to);
+  if (min && max) return `${formatter.format(min)} - ${formatter.format(max)}`;
+  if (min) return formatter.format(min);
+  if (max) return formatter.format(max);
+  return "";
+}
+
+type NycGovJob = {
+  job_id?: string;
+  business_title?: string;
+  agency?: string;
+  job_posting_url?: string;
+  posting_date?: string;
+  full_time_part_time_indicator?: string;
+  salary_range_from?: string;
+  salary_range_to?: string;
+  work_location?: string;
+  job_category?: string;
+  job_description?: string;
+  minimum_qual_requirements?: string;
+};
+
 function looksLikeUS(location: string): boolean {
   if (!location || location === "Remote" || location === "Location not listed") return true;
   const loc = location.toLowerCase();
+  if (FOREIGN_WORD_PATTERNS.some((pattern) => new RegExp(`\\b${pattern}\\b`, "i").test(loc))) return false;
   if (US_STATE_PATTERNS.some((pattern) => loc.includes(pattern))) return true;
   if (/\b(united states|usa|u\.s\.)\b/i.test(loc)) return true;
   if (/\b[A-Z]{2}\b/.test(location) && US_STATE_CODES.has(location.match(/\b([A-Z]{2})\b/)?.[1] ?? "")) return true;
-  if (FOREIGN_WORD_PATTERNS.some((pattern) => new RegExp(`\\b${pattern}\\b`, "i").test(loc))) return false;
   return true;
 }
 
