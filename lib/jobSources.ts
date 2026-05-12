@@ -86,12 +86,12 @@ const SOURCE_META: Record<JobSourceId, Omit<JobSourceStatus, "count" | "ok" | "e
   },
   greenhouse: {
     id: "greenhouse",
-    name: "Company ATS",
+    name: "Direct hire",
     url: "https://www.greenhouse.com"
   },
   smartrecruiters: {
     id: "smartrecruiters",
-    name: "Trade employer feeds",
+    name: "Direct hire",
     url: "https://www.smartrecruiters.com"
   }
 };
@@ -128,7 +128,7 @@ const TRADE_KEYWORDS: Record<string, string[]> = {
   FieldService: ["field service", "installer", "installation", "repair technician", "service technician", "maintenance technician"],
   Energy: ["solar", "wind", "battery", "utility", "renewable", "power plant", "oilfield", "gas technician"],
   Healthcare: ["nurse", "rn", "lpn", "cna", "caregiver", "medical assistant", "dental hygienist", "paramedic", "emt"],
-  Trucking: [
+  CDLTrucking: [
     "truck driver",
     "cdl",
     "otr",
@@ -149,9 +149,16 @@ const TRADE_KEYWORDS: Record<string, string[]> = {
     "linehaul",
     "dockworker",
     "yard jockey",
-    "trailer mechanic"
+    "trailer mechanic",
+    "delivery",
+    "warehouse",
+    "forklift",
+    "logistics",
+    "dispatcher",
+    "equipment operator",
+    "shipping",
+    "receiving"
   ],
-  Logistics: ["delivery", "warehouse", "forklift", "logistics", "dispatcher", "equipment operator", "shipping", "receiving"],
   Safety: ["fire alarm", "security technician", "alarm technician", "elevator", "inspection technician"]
 };
 
@@ -689,7 +696,46 @@ async function fetchSmartRecruitersJobs(): Promise<SourceResult> {
   }
 }
 
+function looksLikeUS(location: string): boolean {
+  if (!location || location === "Remote" || location === "Location not listed") return true;
+  const loc = location.toLowerCase();
+  if (US_STATE_PATTERNS.some((pattern) => loc.includes(pattern))) return true;
+  if (/\b(united states|usa|u\.s\.)\b/i.test(loc)) return true;
+  if (/\b[A-Z]{2}\b/.test(location) && US_STATE_CODES.has(location.match(/\b([A-Z]{2})\b/)?.[1] ?? "")) return true;
+  if (FOREIGN_WORD_PATTERNS.some((pattern) => new RegExp(`\\b${pattern}\\b`, "i").test(loc))) return false;
+  return true;
+}
+
+const US_STATE_CODES = new Set([
+  "AL","AK","AZ","AR","CA","CO","CT","DE","FL","GA","HI","ID","IL","IN","IA","KS",
+  "KY","LA","ME","MD","MA","MI","MN","MS","MO","MT","NE","NV","NH","NJ","NM","NY",
+  "NC","ND","OH","OK","OR","PA","RI","SC","SD","TN","TX","UT","VT","VA","WA","WV","WI","WY","DC"
+]);
+
+const US_STATE_PATTERNS = [
+  "alabama","alaska","arizona","arkansas","california","colorado","connecticut","delaware",
+  "florida","georgia","hawaii","idaho","illinois","indiana","iowa","kansas","kentucky",
+  "louisiana","maine","maryland","massachusetts","michigan","minnesota","mississippi",
+  "missouri","montana","nebraska","nevada","new hampshire","new jersey","new mexico",
+  "new york","north carolina","north dakota","ohio","oklahoma","oregon","pennsylvania",
+  "rhode island","south carolina","south dakota","tennessee","texas","utah","vermont",
+  "virginia","washington","west virginia","wisconsin","wyoming"
+];
+
+const FOREIGN_WORD_PATTERNS = [
+  "germany","france","united kingdom","london","paris","amsterdam","australia",
+  "canada","toronto","vancouver","bangalore","mumbai","singapore","japan","tokyo",
+  "brazil","spain","italy","portugal","sweden","norway","denmark","finland",
+  "poland","czech","austria","switzerland","ireland","belgium","netherlands","south africa",
+  "nigeria","kenya","argentina","chile","colombia","philippines","indonesia","vietnam",
+  "thailand","malaysia","china","beijing","shanghai","hong kong","taiwan","south korea",
+  "seoul","dubai","abu dhabi","saudi","qatar","tel aviv","new zealand","auckland",
+  "europe","asia","africa","latin america","worldwide","anywhere"
+];
+
 function scoreAndCategorize(job: RawJob): AggregatedJob | null {
+  if (!looksLikeUS(job.location)) return null;
+
   const titleText = `${job.title} ${job.tags.join(" ")} ${job.employmentType}`.toLowerCase();
   const text = searchableText(job);
   const titleLooksHandsOn = HANDS_ON_TITLE_TERMS.some((term) => termPresent(titleText, term));
@@ -828,9 +874,15 @@ function stripHtml(value: string): string {
     .replace(/<[^>]+>/g, " ")
     .replace(/&nbsp;/g, " ")
     .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&[a-z]+;/gi, " ")
+    .replace(/<[^>]*>/g, " ")
     .replace(/\s+/g, " ")
     .trim()
-    .slice(0, 420);
+    .slice(0, 200);
 }
 
 function clean(value: unknown): string {

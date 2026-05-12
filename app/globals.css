@@ -218,7 +218,7 @@ button {
   box-shadow: var(--shadow);
   display: grid;
   gap: 10px;
-  grid-template-columns: minmax(220px, 1.3fr) minmax(180px, 0.8fr) 160px 132px;
+  grid-template-columns: minmax(220px, 1.5fr) minmax(180px, 0.8fr) 132px;
   padding: 12px;
 }
 
@@ -296,13 +296,11 @@ button {
 
 .remote-toggle {
   align-items: center;
-  background: #fff;
-  border: 2px solid var(--line);
   display: flex;
   flex: 0 0 auto;
+  font-size: 0.88rem;
   font-weight: 900;
-  gap: 8px;
-  padding: 9px 12px;
+  gap: 6px;
 }
 
 .remote-toggle input {
@@ -320,23 +318,31 @@ button {
   border: 3px solid var(--line);
   border-bottom: 0;
   display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
   justify-content: space-between;
   padding: 14px 16px;
 }
 
-.board-toolbar strong,
-.board-toolbar span {
+.toolbar-left strong,
+.toolbar-left span {
   display: block;
 }
 
-.board-toolbar strong {
+.toolbar-left strong {
   font-size: 1.08rem;
 }
 
-.board-toolbar span {
+.toolbar-left span {
   color: var(--muted);
   font-size: 0.92rem;
   margin-top: 2px;
+}
+
+.toolbar-right {
+  align-items: center;
+  display: flex;
+  gap: 12px;
 }
 
 .text-button {
@@ -851,8 +857,7 @@ button {
   }
 
   .site-header,
-  .site-header nav,
-  .quick-row {
+  .site-header nav {
     flex-direction: column;
   }
 
@@ -863,14 +868,6 @@ button {
 
   .search-bar {
     grid-template-columns: 1fr;
-  }
-
-  .quick-row {
-    align-items: stretch;
-  }
-
-  .remote-toggle {
-    justify-content: center;
   }
 
   .job-row {
@@ -902,9 +899,13 @@ button {
   }
 
   .board-toolbar {
-    align-items: flex-start;
-    gap: 10px;
     flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .toolbar-right {
+    justify-content: space-between;
   }
 
   .job-row {

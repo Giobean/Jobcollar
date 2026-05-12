@@ -14,22 +14,16 @@ const TRADE_CATEGORIES = [
   "FieldService",
   "Energy",
   "Healthcare",
-  "Trucking",
-  "Logistics",
+  "CDLTrucking",
   "Safety"
 ];
 
-const QUICK_SEARCHES = ["electrician", "hvac", "welder", "diesel mechanic", "cdl driver", "cnc machinist"];
+const CATEGORY_LABELS: Record<string, string> = {
+  FieldService: "Field Service",
+  CDLTrucking: "CDL & Trucking"
+};
 
-const SOURCE_OPTIONS = [
-  { value: "", label: "All sources" },
-  { value: "arbeitnow", label: "Arbeitnow" },
-  { value: "remotive", label: "Remotive" },
-  { value: "remoteok", label: "RemoteOK" },
-  { value: "themuse", label: "The Muse" },
-  { value: "greenhouse", label: "Company ATS" },
-  { value: "smartrecruiters", label: "Trade employer feeds" }
-];
+const QUICK_SEARCHES = ["electrician", "hvac", "welder", "diesel mechanic", "cdl driver", "cnc machinist"];
 
 const LOCATION_OPTIONS = [
   { value: "", label: "All locations" },
@@ -93,7 +87,6 @@ export default function Home() {
   const [query, setQuery] = useState("");
   const [location, setLocation] = useState("");
   const [category, setCategory] = useState("");
-  const [source, setSource] = useState("");
   const [remoteOnly, setRemoteOnly] = useState(false);
   const [data, setData] = useState<JobsResponse | null>(null);
   const [loadedRequestKey, setLoadedRequestKey] = useState("");
@@ -106,12 +99,11 @@ export default function Home() {
     if (query) params.set("q", query);
     if (category) params.set("category", category);
     if (location) params.set("location", location);
-    if (source) params.set("source", source);
     if (remoteOnly) params.set("remote", "true");
-    params.set("limit", "1000");
+    params.set("limit", "500");
 
     return params.toString();
-  }, [query, category, location, source, remoteOnly]);
+  }, [query, category, location, remoteOnly]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -164,8 +156,11 @@ export default function Home() {
     setQuery("");
     setLocation("");
     setCategory("");
-    setSource("");
     setRemoteOnly(false);
+  }
+
+  function categoryLabel(value: string) {
+    return CATEGORY_LABELS[value] ?? value.replace(/([a-z])([A-Z])/g, "$1 $2");
   }
 
   return (
@@ -193,16 +188,6 @@ export default function Home() {
                 ))}
               </select>
             </label>
-            <label>
-              <span>Source</span>
-              <select value={source} onChange={(event) => setSource(event.target.value)}>
-                {SOURCE_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </label>
             <button type="submit">Find jobs</button>
           </form>
 
@@ -216,7 +201,7 @@ export default function Home() {
                 className={category === item ? "category-pill active" : "category-pill"}
                 onClick={() => setCategory(item)}
               >
-                {formatCategory(item)}
+                {categoryLabel(item)}
               </button>
             ))}
           </div>
@@ -237,29 +222,30 @@ export default function Home() {
                 </button>
               ))}
             </div>
-
-            <label className="remote-toggle">
-              <input
-                checked={remoteOnly}
-                onChange={(event) => setRemoteOnly(event.target.checked)}
-                type="checkbox"
-              />
-              Remote-capable only
-            </label>
           </div>
 
           <div className="board-toolbar">
-            <div>
+            <div className="toolbar-left">
               <strong>{loading ? "Loading jobs..." : `${jobs.length} jobs`}</strong>
               <span>
-                {query || category || location || source
-                  ? ` Filtered by ${[query, category && formatCategory(category), location, source].filter(Boolean).join(", ")}`
+                {query || category || location
+                  ? ` Filtered by ${[query, category && categoryLabel(category), location].filter(Boolean).join(", ")}`
                   : ""}
               </span>
             </div>
-            <button className="text-button" onClick={clearFilters} type="button">
-              Reset
-            </button>
+            <div className="toolbar-right">
+              <label className="remote-toggle">
+                <input
+                  checked={remoteOnly}
+                  onChange={(event) => setRemoteOnly(event.target.checked)}
+                  type="checkbox"
+                />
+                Remote only
+              </label>
+              <button className="text-button" onClick={clearFilters} type="button">
+                Reset
+              </button>
+            </div>
           </div>
 
           {error ? <ErrorState message={error} /> : null}
@@ -302,6 +288,11 @@ function SiteHeader() {
 }
 
 function JobList({ jobs }: { jobs: AggregatedJob[] }) {
+  function categoryLabel(value: string) {
+    const labels: Record<string, string> = { FieldService: "Field Service", CDLTrucking: "CDL & Trucking" };
+    return labels[value] ?? value.replace(/([a-z])([A-Z])/g, "$1 $2");
+  }
+
   return (
     <section className="job-list" id="jobs" aria-label="Job listings">
       {jobs.map((job) => (
@@ -318,7 +309,6 @@ function JobList({ jobs }: { jobs: AggregatedJob[] }) {
               <a href={job.url} target="_blank" rel="noreferrer">
                 {job.title}
               </a>
-              <span className="source-pill">{job.sourceName}</span>
             </div>
             <div className="job-meta">
               <strong>{job.company}</strong>
@@ -326,11 +316,11 @@ function JobList({ jobs }: { jobs: AggregatedJob[] }) {
               <span>{job.employmentType}</span>
               {job.salary ? <span>{job.salary}</span> : null}
             </div>
-            <p>{job.description || "Public listing with details available on the source job board."}</p>
+            <p>{job.description || "View full details on the job listing page."}</p>
             <div className="tag-row">
-              <span className="trade-tag">{formatCategory(job.tradeCategory)}</span>
+              <span className="trade-tag">{categoryLabel(job.tradeCategory)}</span>
               {job.remote ? <span>remote-capable</span> : null}
-              {job.tags.slice(0, 5).map((tag) => (
+              {job.tags.slice(0, 4).map((tag) => (
                 <span key={`${job.id}-${tag}`}>{tag}</span>
               ))}
             </div>
@@ -374,10 +364,6 @@ function EmptyState() {
       <p>Try a broader trade keyword, remove the location filter, or switch back to all sources.</p>
     </div>
   );
-}
-
-function formatCategory(value: string) {
-  return value.replace(/([a-z])([A-Z])/g, "$1 $2");
 }
 
 function postedDay(value: string) {
