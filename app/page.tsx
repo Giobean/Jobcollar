@@ -19,11 +19,12 @@ const TRADE_CATEGORIES = [
 ];
 
 const CATEGORY_LABELS: Record<string, string> = {
+  Electrical: "Electrical / Electrician",
+  HVAC: "HVAC",
+  Welding: "Welding / Welder",
   FieldService: "Field Service",
-  CDLTrucking: "CDL & Trucking"
+  CDLTrucking: "CDL / Trucking"
 };
-
-const QUICK_SEARCHES = ["electrician", "hvac", "welder", "diesel mechanic", "cdl driver", "cnc machinist"];
 
 const LOCATION_OPTIONS = [
   { value: "", label: "All locations" },
@@ -204,24 +205,6 @@ export default function Home() {
                 {categoryLabel(item)}
               </button>
             ))}
-          </div>
-
-          <div className="quick-row">
-            <div className="quick-scroll" aria-label="Quick searches">
-              {QUICK_SEARCHES.map((item) => (
-                <button
-                  key={item}
-                  className={query === item ? "chip active" : "chip"}
-                  onClick={() => {
-                    setDraftQuery(item);
-                    setQuery(item);
-                  }}
-                  type="button"
-                >
-                  {item}
-                </button>
-              ))}
-            </div>
           </div>
 
           <div className="board-toolbar">
