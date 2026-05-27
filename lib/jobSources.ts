@@ -1,4 +1,4 @@
-export type JobSourceId = "remotive" | "arbeitnow" | "remoteok" | "themuse" | "greenhouse" | "smartrecruiters" | "nycgov";
+export type JobSourceId = "remotive" | "arbeitnow" | "remoteok" | "themuse" | "greenhouse" | "smartrecruiters" | "nycgov" | "usajobs";
 
 export type JobSourceStatus = {
   id: JobSourceId;
@@ -98,6 +98,11 @@ const SOURCE_META: Record<JobSourceId, Omit<JobSourceStatus, "count" | "ok" | "e
     id: "nycgov",
     name: "Government",
     url: "https://www.nyc.gov/jobs"
+  },
+  usajobs: {
+    id: "usajobs",
+    name: "Federal",
+    url: "https://www.usajobs.gov"
   }
 };
 
@@ -422,7 +427,8 @@ export async function aggregateJobs(options: AggregateOptions): Promise<JobsResp
     fetchMuseJobs(searchTerms),
     fetchGreenhouseJobs(),
     fetchSmartRecruitersJobs(),
-    fetchNYCGovJobs()
+    fetchNYCGovJobs(),
+    fetchUSAJobs()
   ];
 
   const results = await Promise.all(sourceFetchers);
@@ -765,6 +771,111 @@ type NycGovJob = {
   job_category?: string;
   job_description?: string;
   minimum_qual_requirements?: string;
+};
+
+async function fetchUSAJobs(): Promise<SourceResult> {
+  const id: JobSourceId = "usajobs";
+  const apiKey = process.env.USAJOBS_API_KEY;
+  if (!apiKey) return { id, jobs: [], error: "USAJOBS_API_KEY not configured" };
+
+  try {
+    const tradeSearches = [
+      "plumber", "electrician", "HVAC", "welder", "carpenter",
+      "mechanic", "maintenance worker", "pipefitter", "boiler",
+      "sheet metal", "truck driver", "elevator mechanic", "mason"
+    ];
+
+    const headers = {
+      "Authorization-Key": apiKey,
+      "User-Agent": "hello@jobcollar.com"
+    };
+
+    const results = await Promise.all(
+      tradeSearches.map(async (keyword) => {
+        try {
+          const data = await fetchJson<USAJobsResponse>(
+            `https://data.usajobs.gov/api/Search?Keyword=${encodeURIComponent(keyword)}&ResultsPerPage=50`,
+            { headers }
+          );
+          return data.SearchResult?.SearchResultItems ?? [];
+        } catch {
+          return [];
+        }
+      })
+    );
+
+    const jobs = results.flat().map((item) => {
+      const m = item.MatchedObjectDescriptor;
+      const locs = m.PositionLocation ?? [];
+      const firstLoc = locs[0];
+      const locationDisplay = m.PositionLocationDisplay || (firstLoc ? `${firstLoc.CityName ?? ""}, ${firstLoc.CountrySubDivisionCode ?? ""}` : "United States");
+
+      const salaryMin = Number(m.PositionRemuneration?.[0]?.MinimumRange) || 0;
+      const salaryMax = Number(m.PositionRemuneration?.[0]?.MaximumRange) || 0;
+
+      return {
+        externalId: `usajobs-${m.PositionID ?? ""}`,
+        title: clean(m.PositionTitle),
+        company: clean(m.OrganizationName) || clean(m.DepartmentName) || "Federal Government",
+        source: id,
+        sourceName: SOURCE_META[id].name,
+        sourceUrl: SOURCE_META[id].url,
+        url: clean(m.PositionURI) || clean(m.ApplyURI?.[0]),
+        location: clean(locationDisplay),
+        remote: false,
+        employmentType: clean(m.PositionSchedule?.[0]?.Name) || "Full-time",
+        salary: formatSalary(salaryMin || undefined, salaryMax || undefined),
+        postedAt: clean(m.PositionStartDate) || clean(m.PublicationStartDate) || "",
+        tags: uniqueStrings([
+          "federal",
+          "government",
+          "benefits",
+          "pension",
+          clean(m.JobGrade?.[0]?.Code)
+        ]),
+        description: stripHtml(clean(m.UserArea?.Content) || clean(m.QualificationSummary) || `Federal ${clean(m.PositionTitle)} position with ${clean(m.OrganizationName)}`)
+      };
+    });
+
+    return { id, jobs: jobs.filter(hasRequiredFields) };
+  } catch (error) {
+    return failedSource(id, error);
+  }
+}
+
+type USAJobsResponse = {
+  SearchResult?: {
+    SearchResultCount?: number;
+    SearchResultCountAll?: number;
+    SearchResultItems?: Array<{
+      MatchedObjectDescriptor: {
+        PositionID?: string;
+        PositionTitle?: string;
+        PositionURI?: string;
+        ApplyURI?: string[];
+        PositionLocationDisplay?: string;
+        PositionLocation?: Array<{
+          CityName?: string;
+          CountrySubDivisionCode?: string;
+        }>;
+        OrganizationName?: string;
+        DepartmentName?: string;
+        PositionSchedule?: Array<{ Name?: string }>;
+        PositionRemuneration?: Array<{
+          MinimumRange?: string;
+          MaximumRange?: string;
+          RateIntervalCode?: string;
+        }>;
+        PositionStartDate?: string;
+        PublicationStartDate?: string;
+        QualificationSummary?: string;
+        JobGrade?: Array<{ Code?: string }>;
+        UserArea?: {
+          Content?: string;
+        };
+      };
+    }>;
+  };
 };
 
 function looksLikeUS(location: string): boolean {
