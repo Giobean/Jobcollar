@@ -417,7 +417,7 @@ export async function aggregateJobs(options: AggregateOptions): Promise<JobsResp
   const location = clean(options.location ?? "");
   const source = clean(options.source ?? "");
   const remote = Boolean(options.remote);
-  const limit = Math.min(Math.max(options.limit ?? 300, 1), 1000);
+  const limit = Math.max(options.limit ?? 10000, 1);
   const searchTerms = q ? [q] : DEFAULT_SEARCH_TERMS;
 
   const sourceFetchers: Array<Promise<SourceResult>> = [

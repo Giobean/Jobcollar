@@ -17,7 +17,7 @@ export async function GET(request: Request) {
     location: sanitizeParam(searchParams.get("location"), 50),
     remote: searchParams.get("remote") === "true",
     source: sanitizeParam(searchParams.get("source"), 30),
-    limit: Math.min(Math.max(Number(searchParams.get("limit")) || 200, 1), 1000)
+    limit: Math.max(Number(searchParams.get("limit")) || 10000, 1)
   });
 
   return NextResponse.json(jobs, {

@@ -100,7 +100,7 @@ export default function Home() {
     if (category) params.set("category", category);
     if (location) params.set("location", location);
     if (remoteOnly) params.set("remote", "true");
-    params.set("limit", "500");
+    params.set("limit", "10000");
 
     return params.toString();
   }, [query, category, location, remoteOnly]);
