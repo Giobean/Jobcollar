@@ -1,2 +1,10 @@
-jobcollar.sqlite
-rate_limit/
+storage/database/*.sqlite
+storage/uploads/*
+!storage/uploads/.gitkeep
+storage/rate_limit/
+logs/*.log
+.env
+.DS_Store
+*.swp
+*.swo
+node_modules/
