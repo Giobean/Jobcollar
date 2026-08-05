@@ -1,96 +1,114 @@
-# JobCollar
+# JobCollar Resume Platform
 
-AI-powered resume builder platform. Build, score, and track your job applications.
+A production-quality PHP 8.3 resume builder platform with SQLite storage. No frameworks — vanilla PHP with clean architecture.
 
 ## Features
 
-- **Resume Builder** — Multi-step wizard with live preview, auto-save, and 3 templates (Minimal, Professional, Modern)
-- **ATS Checker** — Analyzes resume for ATS compatibility with actionable suggestions
-- **Resume Score** — Quality scoring based on completeness, achievements, keywords, and formatting
-- **Job Tracker** — Kanban board to manage applications through every stage
-- **PDF Export** — Export resumes as print-ready PDFs
-- **Dark/Light Mode** — Premium UI with system preference detection
-- **Command Palette** — Quick navigation with Ctrl+K
-
-## Tech Stack
-
-- PHP 8.3 (vanilla, no frameworks)
-- SQLite (zero-config database)
-- Vanilla JavaScript (ES2023)
-- Vanilla CSS (custom properties, no preprocessors)
-- No external dependencies
+- User registration & authentication (Argon2ID)
+- Full resume CRUD with 12+ section types
+- Resume duplication
+- Section reordering
+- Dashboard with statistics
+- User settings (profile, password, preferences)
+- CSRF protection on all mutations
+- File-based rate limiting (5 req/min per IP)
+- Prepared statements everywhere (SQL injection safe)
+- Remember-me cookie authentication
+- Audit logging
 
 ## Quick Start
 
 ```bash
-# Clone and install
-git clone https://github.com/Giobean/Jobcollar.git
-cd Jobcollar
+# Install & initialize
 chmod +x install.sh
 ./install.sh
 
-# Run development server
-php -S localhost:3000 -t public
-
-# Visit http://localhost:3000
-# Demo: demo@jobcollar.com / password123
+# Start development server
+php -S localhost:8000 -t public public/index.php
 ```
+
+Open http://localhost:8000
+
+### Demo Account
+
+After seeding:
+- **Email:** demo@jobcollar.com
+- **Password:** password
 
 ## Project Structure
 
 ```
-public/            → Web root (front controller + static assets)
-  assets/css/      → Stylesheets
-  assets/js/       → JavaScript modules
-  assets/img/      → Images
-php/
-  api/             → JSON API endpoints
-  classes/         → Core classes (Database, Router, Auth, Validator)
-  middleware/      → Auth & Guest middleware
-  views/           → HTML view shells
-storage/
-  database/        → SQLite database + schema
-  uploads/         → User file uploads
-scripts/           → CLI scripts (init, seed, backup)
-deploy/            → Nginx config, deployment files
+├── public/
+│   ├── index.php           # Front controller
+│   └── assets/             # CSS, JS, images
+├── src/
+│   ├── classes/            # Core classes (Database, Router, Auth, Validator)
+│   ├── middleware/         # Auth & Guest middleware
+│   ├── api/                # API route handlers
+│   └── views/             # PHP view templates
+├── storage/
+│   ├── database/           # SQLite DB & schema
+│   ├── uploads/            # User uploads
+│   └── sessions/           # PHP sessions & rate limit data
+├── scripts/                # DB init & seed scripts
+├── deploy/                 # Nginx production config
+└── install.sh              # Installation script
 ```
 
 ## API Endpoints
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | /api/auth/register | Create account |
-| POST | /api/auth/login | Sign in |
-| POST | /api/auth/logout | Sign out |
-| GET | /api/dashboard | Dashboard stats |
-| GET | /api/resumes | List resumes |
-| POST | /api/resumes | Create resume |
-| GET | /api/resumes/:id | Get resume with all sections |
-| PUT | /api/resumes/:id/personal | Update personal info |
-| POST | /api/resumes/:id/experience | Add experience entry |
-| POST | /api/ats/check | Run ATS analysis |
-| POST | /api/score/check | Calculate resume score |
-| GET | /api/applications | List job applications |
-| POST | /api/applications | Create application |
+### Authentication
+- `POST /api/auth/register` — Create account
+- `POST /api/auth/login` — Sign in
+- `POST /api/auth/logout` — Sign out
+- `POST /api/auth/forgot-password` — Request password reset
+
+### Resumes
+- `GET /api/resumes` — List all resumes
+- `POST /api/resumes` — Create resume
+- `GET /api/resumes/{id}` — Get resume with all sections
+- `PUT /api/resumes/{id}` — Update metadata
+- `DELETE /api/resumes/{id}` — Delete resume
+- `POST /api/resumes/{id}/duplicate` — Duplicate resume
+- `PUT /api/resumes/{id}/personal` — Update personal info
+- `PUT /api/resumes/{id}/summary` — Update summary
+- `POST /api/resumes/{id}/reorder` — Reorder sections
+- `POST /api/resumes/{id}/{section}` — Add entry
+- `PUT /api/resumes/{id}/{section}/{entryId}` — Update entry
+- `DELETE /api/resumes/{id}/{section}/{entryId}` — Delete entry
+
+Sections: experience, education, skills, projects, certifications, awards, languages, volunteer, references, custom
+
+### Dashboard
+- `GET /api/dashboard` — Stats & recent resumes
+
+### Settings
+- `GET /api/settings` — Get all settings
+- `PUT /api/settings/profile` — Update profile
+- `PUT /api/settings/password` — Change password
+- `PUT /api/settings/preferences` — Update preferences
+- `DELETE /api/settings/account` — Delete account
+
+## Response Format
+
+```json
+// Success
+{"data": {...}, "status": 200}
+
+// Error
+{"error": "message", "status": 4xx}
+```
+
+## Requirements
+
+- PHP 8.3+ with pdo_sqlite, mbstring, session extensions
+- SQLite 3
 
 ## Production Deployment
 
-1. Point your domain to the server
-2. Copy `deploy/nginx.conf` to `/etc/nginx/sites-available/`
-3. Set `root` to your project's `public/` directory
-4. Ensure `storage/` is writable by the web server
-5. Configure Cloudflare Tunnel for HTTPS
-
-## Security
-
-- Argon2ID password hashing
-- CSRF protection on all mutations
-- Prepared statements (no SQL injection)
-- XSS protection via output escaping
-- Rate limiting on auth endpoints
-- Secure session configuration
-- Input sanitization
-
-## License
-
-MIT
+See `deploy/nginx.conf` for a production-ready nginx configuration with:
+- HTTPS/TLS 1.2+
+- Security headers (CSP, HSTS, X-Frame-Options, etc.)
+- Gzip compression
+- Static file caching (1 year)
+- PHP-FPM integration

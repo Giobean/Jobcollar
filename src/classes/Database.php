@@ -1,36 +1,28 @@
 <?php
 
-declare(strict_types=1);
-
 class Database
 {
     private static ?Database $instance = null;
     private PDO $pdo;
 
-    private const DB_PATH = '/workspace/storage/database/jobcollar.sqlite';
-
     private function __construct()
     {
-        $dir = dirname(self::DB_PATH);
-        if (!is_dir($dir)) {
-            mkdir($dir, 0755, true);
+        $dbPath = '/workspace/storage/database/jobcollar.sqlite';
+        $dbDir = dirname($dbPath);
+
+        if (!is_dir($dbDir)) {
+            mkdir($dbDir, 0755, true);
         }
 
-        $this->pdo = new PDO('sqlite:' . self::DB_PATH, options: [
-            PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
+        $this->pdo = new PDO("sqlite:{$dbPath}", null, null, [
+            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
             PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-            PDO::ATTR_EMULATE_PREPARES   => false,
+            PDO::ATTR_EMULATE_PREPARES => false,
         ]);
 
         $this->pdo->exec('PRAGMA journal_mode = WAL');
         $this->pdo->exec('PRAGMA foreign_keys = ON');
-    }
-
-    private function __clone() {}
-
-    public function __wakeup()
-    {
-        throw new \RuntimeException('Cannot unserialize singleton');
+        $this->pdo->exec('PRAGMA busy_timeout = 5000');
     }
 
     public static function getInstance(): self
@@ -55,23 +47,39 @@ class Database
 
     public function fetch(string $sql, array $params = []): ?array
     {
-        $result = $this->query($sql, $params)->fetch();
-        return $result === false ? null : $result;
+        $stmt = $this->query($sql, $params);
+        $result = $stmt->fetch();
+        return $result ?: null;
     }
 
     public function fetchAll(string $sql, array $params = []): array
     {
-        return $this->query($sql, $params)->fetchAll();
+        $stmt = $this->query($sql, $params);
+        return $stmt->fetchAll();
     }
 
     public function execute(string $sql, array $params = []): int
     {
-        return $this->query($sql, $params)->rowCount();
+        $stmt = $this->query($sql, $params);
+        return $stmt->rowCount();
     }
 
-    public function lastInsertId(): string
+    public function lastInsertId(): int
     {
-        return $this->pdo->lastInsertId();
+        return (int) $this->pdo->lastInsertId();
+    }
+
+    public function transaction(callable $callback): mixed
+    {
+        $this->pdo->beginTransaction();
+        try {
+            $result = $callback($this);
+            $this->pdo->commit();
+            return $result;
+        } catch (\Throwable $e) {
+            $this->pdo->rollBack();
+            throw $e;
+        }
     }
 
     public function beginTransaction(): bool
@@ -88,4 +96,7 @@ class Database
     {
         return $this->pdo->rollBack();
     }
+
+    private function __clone() {}
+    public function __wakeup() { throw new \Exception("Cannot unserialize singleton"); }
 }

@@ -4,11 +4,41 @@ declare(strict_types=1);
 
 define('BASE_PATH', dirname(__DIR__));
 
-// Autoload classes
+// --- Static file serving ---
+$requestUri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
+if (str_starts_with($requestUri, '/assets/')) {
+    $filePath = BASE_PATH . '/public' . $requestUri;
+    if (is_file($filePath)) {
+        $ext = pathinfo($filePath, PATHINFO_EXTENSION);
+        $mimeTypes = [
+            'css' => 'text/css',
+            'js' => 'application/javascript',
+            'png' => 'image/png',
+            'jpg' => 'image/jpeg',
+            'jpeg' => 'image/jpeg',
+            'gif' => 'image/gif',
+            'svg' => 'image/svg+xml',
+            'ico' => 'image/x-icon',
+            'woff' => 'font/woff',
+            'woff2' => 'font/woff2',
+            'ttf' => 'font/ttf',
+            'eot' => 'application/vnd.ms-fontobject',
+            'json' => 'application/json',
+            'webp' => 'image/webp',
+        ];
+        $mime = $mimeTypes[$ext] ?? 'application/octet-stream';
+        header("Content-Type: {$mime}");
+        header('Cache-Control: public, max-age=31536000');
+        readfile($filePath);
+        exit;
+    }
+}
+
+// --- Autoloader ---
 spl_autoload_register(function (string $class): void {
     $paths = [
-        BASE_PATH . '/php/classes/' . $class . '.php',
-        BASE_PATH . '/php/middleware/' . $class . '.php',
+        BASE_PATH . '/src/classes/' . $class . '.php',
+        BASE_PATH . '/src/middleware/' . $class . '.php',
     ];
     foreach ($paths as $path) {
         if (file_exists($path)) {
@@ -18,189 +48,277 @@ spl_autoload_register(function (string $class): void {
     }
 });
 
-// Session configuration
-ini_set('session.cookie_httponly', '1');
-ini_set('session.cookie_samesite', 'Strict');
-ini_set('session.gc_maxlifetime', '86400');
-ini_set('session.cookie_lifetime', '86400');
-ini_set('session.use_strict_mode', '1');
-
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
+// --- Session configuration ---
+$sessionDir = BASE_PATH . '/storage/sessions';
+if (!is_dir($sessionDir)) {
+    mkdir($sessionDir, 0755, true);
 }
 
-// Rate limiting for auth endpoints
-function checkRateLimit(string $action): bool
+ini_set('session.save_path', $sessionDir);
+ini_set('session.gc_maxlifetime', '86400');
+ini_set('session.cookie_lifetime', '86400');
+
+session_set_cookie_params([
+    'lifetime' => 86400,
+    'path' => '/',
+    'httponly' => true,
+    'samesite' => 'Strict',
+    'secure' => isset($_SERVER['HTTPS']),
+]);
+
+session_start();
+
+// --- Rate limiting (file-based, 5 requests/min per IP for mutating methods) ---
+function checkRateLimit(): bool
 {
-    $ip = $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';
-    $key = md5($ip . ':' . $action);
-    $dir = BASE_PATH . '/storage/rate_limit';
-    if (!is_dir($dir)) {
-        mkdir($dir, 0755, true);
+    $method = $_SERVER['REQUEST_METHOD'];
+    if (in_array($method, ['GET', 'HEAD', 'OPTIONS'])) {
+        return true;
     }
-    $file = $dir . '/' . $key . '.json';
 
-    $window = 60;
-    $maxAttempts = 5;
+    $ip = $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';
+    $rateLimitDir = BASE_PATH . '/storage/sessions/ratelimit';
+    if (!is_dir($rateLimitDir)) {
+        mkdir($rateLimitDir, 0755, true);
+    }
+
+    $file = $rateLimitDir . '/' . md5($ip) . '.json';
     $now = time();
+    $window = 60;
+    $maxRequests = 5;
 
-    $attempts = [];
+    $data = [];
     if (file_exists($file)) {
         $data = json_decode(file_get_contents($file), true) ?: [];
-        $attempts = array_filter($data, fn(int $ts) => $ts > ($now - $window));
     }
 
-    if (count($attempts) >= $maxAttempts) {
+    $data = array_filter($data, fn($t) => $t > ($now - $window));
+
+    if (count($data) >= $maxRequests) {
         return false;
     }
 
-    $attempts[] = $now;
-    file_put_contents($file, json_encode(array_values($attempts)), LOCK_EX);
+    $data[] = $now;
+    file_put_contents($file, json_encode($data), LOCK_EX);
     return true;
 }
 
-function jsonResponse(mixed $data, int $status = 200): never
+// --- JSON helpers ---
+function jsonResponse(mixed $data, int $status = 200): void
 {
     http_response_code($status);
     header('Content-Type: application/json');
-    echo json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    echo json_encode(['data' => $data, 'status' => $status], JSON_UNESCAPED_UNICODE);
     exit;
 }
 
-function jsonError(string $message, int $status = 400): never
+function jsonError(string $message, int $status = 400): void
 {
-    jsonResponse(['error' => $message, 'status' => $status], $status);
-}
-
-function jsonSuccess(mixed $data, int $status = 200): never
-{
-    jsonResponse(['data' => $data, 'status' => $status], $status);
+    http_response_code($status);
+    header('Content-Type: application/json');
+    echo json_encode(['error' => $message, 'status' => $status], JSON_UNESCAPED_UNICODE);
+    exit;
 }
 
 function getJsonInput(): array
 {
-    $raw = file_get_contents('php://input');
-    if (empty($raw)) {
+    $input = file_get_contents('php://input');
+    if (empty($input)) {
         return $_POST;
     }
-    $decoded = json_decode($raw, true);
-    return is_array($decoded) ? $decoded : [];
+    $data = json_decode($input, true);
+    return is_array($data) ? $data : [];
 }
 
-function sanitize(mixed $value): mixed
-{
-    if (is_string($value)) {
-        return htmlspecialchars(strip_tags(trim($value)), ENT_QUOTES, 'UTF-8');
-    }
-    if (is_array($value)) {
-        return array_map('sanitize', $value);
-    }
-    return $value;
-}
+// --- CSRF enforcement ---
+$method = $_SERVER['REQUEST_METHOD'];
+$uri = $requestUri;
 
-function requireCsrf(): void
-{
-    if (!Auth::validateCsrf()) {
-        jsonError('Invalid CSRF token', 403);
+if (in_array($method, ['POST', 'PUT', 'DELETE']) && !str_starts_with($uri, '/api/')) {
+    $token = $_POST['_csrf'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? null;
+    if (!Auth::validateCsrf($token)) {
+        http_response_code(403);
+        echo 'CSRF token validation failed.';
+        exit;
     }
 }
 
-function requireAuth(): void
-{
-    if (!Auth::check()) {
-        jsonError('Unauthorized', 401);
+// API CSRF: check X-CSRF-TOKEN header or _csrf in body
+if (in_array($method, ['POST', 'PUT', 'DELETE']) && str_starts_with($uri, '/api/')) {
+    $token = $_SERVER['HTTP_X_CSRF_TOKEN'] ?? null;
+    if (!$token) {
+        $input = getJsonInput();
+        $token = $input['_csrf'] ?? null;
+    }
+    if (!Auth::validateCsrf($token)) {
+        jsonError('CSRF token validation failed', 403);
     }
 }
 
-function renderView(string $view): void
-{
-    $csrfToken = Auth::generateCsrfToken();
-    $user = Auth::user();
-    require BASE_PATH . '/php/views/' . $view . '.php';
+// --- Rate limit check ---
+if (!checkRateLimit()) {
+    if (str_starts_with($uri, '/api/')) {
+        jsonError('Too many requests. Please try again later.', 429);
+    } else {
+        http_response_code(429);
+        echo 'Too many requests. Please try again later.';
+        exit;
+    }
 }
 
-// Router setup
+// --- Router setup ---
 $router = new Router();
 
-// Page routes – guest pages
-$router->group(['middleware' => [GuestMiddleware::class]], function (Router $r) {
-    $r->get('/login', fn() => renderView('login'));
-    $r->get('/register', fn() => renderView('register'));
-    $r->get('/forgot-password', fn() => renderView('forgot-password'));
+// Guest pages
+$router->group(['middleware' => 'GuestMiddleware'], function (Router $r) {
+    $r->get('/login', function () {
+        require BASE_PATH . '/src/views/login.php';
+    });
+    $r->get('/register', function () {
+        require BASE_PATH . '/src/views/register.php';
+    });
+    $r->get('/forgot-password', function () {
+        require BASE_PATH . '/src/views/forgot-password.php';
+    });
 });
 
-// Page routes – authenticated pages
-$router->group(['middleware' => [AuthMiddleware::class]], function (Router $r) {
-    $r->get('/dashboard', fn() => renderView('dashboard'));
-    $r->get('/resumes', fn() => renderView('resume-builder'));
-    $r->get('/resumes/{id}', fn() => renderView('resume-builder'));
-    $r->get('/applications', fn() => renderView('applications'));
-    $r->get('/settings', fn() => renderView('settings'));
-});
-
-// Redirect root
+// Landing page (accessible to all)
 $router->get('/', function () {
     if (Auth::check()) {
         header('Location: /dashboard');
-    } else {
-        header('Location: /login');
+        exit;
     }
-    exit;
+    require BASE_PATH . '/src/views/landing.php';
 });
 
-// API routes – auth (no auth middleware, CSRF checked inside handler)
-$router->group(['prefix' => 'api/auth'], function (Router $r) {
-    $r->post('/register', [BASE_PATH . '/php/api/auth.php', 'handleRegister']);
-    $r->post('/login', [BASE_PATH . '/php/api/auth.php', 'handleLogin']);
-    $r->post('/logout', [BASE_PATH . '/php/api/auth.php', 'handleLogout']);
-    $r->post('/forgot-password', [BASE_PATH . '/php/api/auth.php', 'handleForgotPassword']);
+// Templates (accessible to all)
+$router->get('/templates', function () {
+    require BASE_PATH . '/src/views/templates.php';
 });
 
-// API routes – authenticated
-$router->group(['prefix' => 'api', 'middleware' => [AuthMiddleware::class]], function (Router $r) {
-    // Dashboard
-    $r->get('/dashboard', [BASE_PATH . '/php/api/dashboard.php', 'handleDashboard']);
+// Auth pages
+$router->group(['middleware' => 'AuthMiddleware'], function (Router $r) {
+    $r->get('/dashboard', function () {
+        require BASE_PATH . '/src/views/dashboard.php';
+    });
+    $r->get('/resumes/{id}', function (array $params) {
+        require BASE_PATH . '/src/views/builder.php';
+    });
+    $r->get('/settings', function () {
+        require BASE_PATH . '/src/views/settings.php';
+    });
+});
 
-    // Resumes
-    $r->get('/resumes', [BASE_PATH . '/php/api/resumes.php', 'handleListResumes']);
-    $r->post('/resumes', [BASE_PATH . '/php/api/resumes.php', 'handleCreateResume']);
-    $r->get('/resumes/{id}', [BASE_PATH . '/php/api/resumes.php', 'handleGetResume']);
-    $r->put('/resumes/{id}', [BASE_PATH . '/php/api/resumes.php', 'handleUpdateResume']);
-    $r->delete('/resumes/{id}', [BASE_PATH . '/php/api/resumes.php', 'handleDeleteResume']);
+// API: Auth routes (guest-only for register/login)
+$router->group(['prefix' => '/api/auth'], function (Router $r) {
+    $r->group(['middleware' => 'GuestMiddleware'], function (Router $r) {
+        $r->post('/register', function () {
+            require BASE_PATH . '/src/api/auth.php';
+            handleRegister();
+        });
+        $r->post('/login', function () {
+            require BASE_PATH . '/src/api/auth.php';
+            handleLogin();
+        });
+        $r->post('/forgot-password', function () {
+            require BASE_PATH . '/src/api/auth.php';
+            handleForgotPassword();
+        });
+    });
+    $r->post('/logout', function () {
+        require BASE_PATH . '/src/api/auth.php';
+        handleLogout();
+    });
+});
 
-    $r->put('/resumes/{id}/personal', [BASE_PATH . '/php/api/resumes.php', 'handleUpdatePersonal']);
-    $r->put('/resumes/{id}/summary', [BASE_PATH . '/php/api/resumes.php', 'handleUpdateSummary']);
+// API: Resumes (auth required)
+$router->group(['prefix' => '/api/resumes', 'middleware' => 'AuthMiddleware'], function (Router $r) {
+    $r->get('', function () {
+        require BASE_PATH . '/src/api/resumes.php';
+        handleListResumes();
+    });
+    $r->post('', function () {
+        require BASE_PATH . '/src/api/resumes.php';
+        handleCreateResume();
+    });
+    $r->get('/{id}', function (array $params) {
+        require BASE_PATH . '/src/api/resumes.php';
+        handleGetResume($params['id']);
+    });
+    $r->put('/{id}', function (array $params) {
+        require BASE_PATH . '/src/api/resumes.php';
+        handleUpdateResume($params['id']);
+    });
+    $r->delete('/{id}', function (array $params) {
+        require BASE_PATH . '/src/api/resumes.php';
+        handleDeleteResume($params['id']);
+    });
+    $r->post('/{id}/duplicate', function (array $params) {
+        require BASE_PATH . '/src/api/resumes.php';
+        handleDuplicateResume($params['id']);
+    });
+    $r->put('/{id}/personal', function (array $params) {
+        require BASE_PATH . '/src/api/resumes.php';
+        handleUpdatePersonal($params['id']);
+    });
+    $r->put('/{id}/summary', function (array $params) {
+        require BASE_PATH . '/src/api/resumes.php';
+        handleUpdateSummary($params['id']);
+    });
+    $r->post('/{id}/reorder', function (array $params) {
+        require BASE_PATH . '/src/api/resumes.php';
+        handleReorderSections($params['id']);
+    });
 
-    // Resume sections with entries
-    foreach (['experience', 'education', 'skills', 'projects', 'certifications', 'awards', 'languages', 'volunteer', 'references', 'custom'] as $section) {
-        $r->post("/resumes/{id}/$section", [BASE_PATH . '/php/api/resumes.php', "handleAddEntry"]);
-        $r->put("/resumes/{id}/$section/{entryId}", [BASE_PATH . '/php/api/resumes.php', "handleUpdateEntry"]);
-        $r->delete("/resumes/{id}/$section/{entryId}", [BASE_PATH . '/php/api/resumes.php', "handleDeleteEntry"]);
+    // Entry CRUD for sections
+    $sections = ['experience', 'education', 'skills', 'projects', 'certifications', 'awards', 'languages', 'volunteer', 'references', 'custom'];
+    foreach ($sections as $section) {
+        $r->post("/{id}/{$section}", function (array $params) use ($section) {
+            require BASE_PATH . '/src/api/resumes.php';
+            handleCreateEntry($params['id'], $section);
+        });
+        $r->put("/{id}/{$section}/{entryId}", function (array $params) use ($section) {
+            require BASE_PATH . '/src/api/resumes.php';
+            handleUpdateEntry($params['id'], $section, $params['entryId']);
+        });
+        $r->delete("/{id}/{$section}/{entryId}", function (array $params) use ($section) {
+            require BASE_PATH . '/src/api/resumes.php';
+            handleDeleteEntry($params['id'], $section, $params['entryId']);
+        });
     }
+});
 
-    $r->post('/resumes/{id}/reorder', [BASE_PATH . '/php/api/resumes.php', 'handleReorder']);
-    $r->post('/resumes/{id}/duplicate', [BASE_PATH . '/php/api/resumes.php', 'handleDuplicate']);
+// API: Dashboard
+$router->group(['prefix' => '/api', 'middleware' => 'AuthMiddleware'], function (Router $r) {
+    $r->get('/dashboard', function () {
+        require BASE_PATH . '/src/api/dashboard.php';
+        handleDashboard();
+    });
+});
 
-    // Applications
-    $r->get('/applications', [BASE_PATH . '/php/api/applications.php', 'handleListApplications']);
-    $r->post('/applications', [BASE_PATH . '/php/api/applications.php', 'handleCreateApplication']);
-    $r->put('/applications/{id}', [BASE_PATH . '/php/api/applications.php', 'handleUpdateApplication']);
-    $r->delete('/applications/{id}', [BASE_PATH . '/php/api/applications.php', 'handleDeleteApplication']);
-    $r->put('/applications/{id}/archive', [BASE_PATH . '/php/api/applications.php', 'handleArchiveApplication']);
-
-    // ATS & Score
-    $r->post('/ats/check', [BASE_PATH . '/php/api/ats.php', 'handleAtsCheck']);
-    $r->post('/score/check', [BASE_PATH . '/php/api/score.php', 'handleScoreCheck']);
-
-    // Settings
-    $r->get('/settings', [BASE_PATH . '/php/api/settings.php', 'handleGetSettings']);
-    $r->put('/settings/profile', [BASE_PATH . '/php/api/settings.php', 'handleUpdateProfile']);
-    $r->put('/settings/password', [BASE_PATH . '/php/api/settings.php', 'handleUpdatePassword']);
-    $r->put('/settings/preferences', [BASE_PATH . '/php/api/settings.php', 'handleUpdatePreferences']);
-    $r->delete('/settings/account', [BASE_PATH . '/php/api/settings.php', 'handleDeleteAccount']);
+// API: Settings
+$router->group(['prefix' => '/api/settings', 'middleware' => 'AuthMiddleware'], function (Router $r) {
+    $r->get('', function () {
+        require BASE_PATH . '/src/api/settings.php';
+        handleGetSettings();
+    });
+    $r->put('/profile', function () {
+        require BASE_PATH . '/src/api/settings.php';
+        handleUpdateProfile();
+    });
+    $r->put('/password', function () {
+        require BASE_PATH . '/src/api/settings.php';
+        handleUpdatePassword();
+    });
+    $r->put('/preferences', function () {
+        require BASE_PATH . '/src/api/settings.php';
+        handleUpdatePreferences();
+    });
+    $r->delete('/account', function () {
+        require BASE_PATH . '/src/api/settings.php';
+        handleDeleteAccount();
+    });
 });
 
 // Dispatch
-$method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
-$uri = $_SERVER['REQUEST_URI'] ?? '/';
 $router->dispatch($method, $uri);
