@@ -11,5 +11,6 @@
 <body>
     <div id="app" data-page="resume-builder"></div>
     <script src="/js/app.js"></script>
+    <script src="/js/resume-builder.js"></script>
 </body>
 </html>
