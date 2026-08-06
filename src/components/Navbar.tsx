@@ -35,12 +35,12 @@ export default function Navbar() {
               >
                 Features
               </a>
-              <a
-                href="#templates"
+              <Link
+                href="/templates"
                 className="text-sm text-gray-400 hover:text-white transition-colors"
               >
                 Templates
-              </a>
+              </Link>
               <a
                 href="#pricing"
                 className="text-sm text-gray-400 hover:text-white transition-colors"
@@ -101,13 +101,13 @@ export default function Navbar() {
           >
             Features
           </a>
-          <a
-            href="#templates"
+          <Link
+            href="/templates"
             className="block text-sm text-gray-400 hover:text-white py-2"
             onClick={() => setMobileOpen(false)}
           >
             Templates
-          </a>
+          </Link>
           <a
             href="#pricing"
             className="block text-sm text-gray-400 hover:text-white py-2"

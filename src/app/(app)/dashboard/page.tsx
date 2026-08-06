@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createResume, deleteResume } from "@/app/actions/resume";
+import DashboardActions from "@/components/DashboardActions";
 
 function timeAgo(date: Date): string {
   const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
@@ -41,30 +42,7 @@ export default async function DashboardPage() {
             Manage your resumes and track your progress
           </p>
         </div>
-        <form action={createResume}>
-          <input type="hidden" name="title" value="Untitled Resume" />
-          <input type="hidden" name="template" value="minimal" />
-          <button
-            type="submit"
-            className="flex items-center gap-2 rounded-xl bg-blue-600 px-6 py-3 text-sm font-semibold text-white hover:bg-blue-500 transition-all duration-200 shadow-lg shadow-blue-600/20"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              strokeWidth={2}
-              stroke="currentColor"
-              className="w-4 h-4"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M12 4.5v15m7.5-7.5h-15"
-              />
-            </svg>
-            Create New Resume
-          </button>
-        </form>
+        <DashboardActions />
       </div>
 
       {/* Stats */}

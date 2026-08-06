@@ -25,9 +25,12 @@ const features = [
 ];
 
 const templates = [
-  { name: "Minimal", users: "2.4M", accent: "border-t-gray-400" },
-  { name: "Professional", users: "1.8M", accent: "border-t-blue-500" },
-  { name: "Modern", users: "3.1M", accent: "border-t-violet-500" },
+  { name: "Classic", users: "19M", accent: "border-t-gray-600" },
+  { name: "Minimal", users: "12M", accent: "border-t-gray-400" },
+  { name: "Professional", users: "6.7M", accent: "border-t-blue-500" },
+  { name: "Modern", users: "4.6M", accent: "border-t-violet-500" },
+  { name: "Corporate", users: "5.1M", accent: "border-t-slate-500" },
+  { name: "Clean", users: "2.2M", accent: "border-t-emerald-500" },
 ];
 
 function MiniResume({ accent }: { accent: string }) {
@@ -170,7 +173,7 @@ export default function LandingPage() {
               <span className="text-gray-500">for every career</span>
             </h2>
           </div>
-          <div className="grid sm:grid-cols-3 gap-8">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-8">
             {templates.map((t) => (
               <div
                 key={t.name}
@@ -185,6 +188,14 @@ export default function LandingPage() {
                 </div>
               </div>
             ))}
+          </div>
+          <div className="text-center mt-12">
+            <Link
+              href="/templates"
+              className="rounded-xl border border-white/15 px-8 py-4 text-base font-semibold text-gray-300 hover:text-white hover:border-white/30 hover:bg-white/5 transition-all duration-200 inline-block"
+            >
+              View All Templates →
+            </Link>
           </div>
         </div>
       </section>

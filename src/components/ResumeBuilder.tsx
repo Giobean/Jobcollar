@@ -40,8 +40,13 @@ const STEPS = [
 
 const TEMPLATES = [
   { value: "minimal", label: "Minimal" },
+  { value: "classic", label: "Classic" },
   { value: "professional", label: "Professional" },
   { value: "modern", label: "Modern" },
+  { value: "corporate", label: "Corporate" },
+  { value: "executive", label: "Executive" },
+  { value: "creative", label: "Creative" },
+  { value: "clean", label: "Clean" },
 ];
 
 export default function ResumeBuilder({
