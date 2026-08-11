@@ -1,0 +1,106 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  password      String?
+  theme         String    @default("light")
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts Account[]
+  sessions Session[]
+  resumes  Resume[]
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Resume {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String   @default("Untitled Resume")
+  template  String   @default("minimal")
+  color     String   @default("#2563eb")
+  font      String   @default("Inter")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user     User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  personal ResumePersonal?
+  summary  ResumeSummary?
+  entries  ResumeEntry[]
+
+  @@index([userId])
+}
+
+model ResumePersonal {
+  id        String @id @default(cuid())
+  resumeId  String @unique
+  firstName String @default("")
+  lastName  String @default("")
+  email     String @default("")
+  phone     String @default("")
+  location  String @default("")
+  website   String @default("")
+  linkedin  String @default("")
+  github    String @default("")
+  jobTitle  String @default("")
+
+  resume Resume @relation(fields: [resumeId], references: [id], onDelete: Cascade)
+}
+
+model ResumeSummary {
+  id       String @id @default(cuid())
+  resumeId String @unique
+  content  String @default("")
+
+  resume Resume @relation(fields: [resumeId], references: [id], onDelete: Cascade)
+}
+
+model ResumeEntry {
+  id        String   @id @default(cuid())
+  resumeId  String
+  section   String
+  data      String   @default("{}")
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+
+  resume Resume @relation(fields: [resumeId], references: [id], onDelete: Cascade)
+
+  @@index([resumeId, section])
+}
