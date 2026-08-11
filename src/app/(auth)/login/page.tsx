@@ -1,7 +1,18 @@
+"use client";
+
 import Link from "next/link";
 import { loginAction } from "@/app/actions/auth";
+import { useActionState } from "react";
 
 export default function LoginPage() {
+  const [state, formAction, pending] = useActionState(
+    async (_prev: { error?: string }, formData: FormData) => {
+      const result = await loginAction(formData);
+      return result ?? {};
+    },
+    {}
+  );
+
   return (
     <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-8 md:p-10">
       <h1 className="text-2xl font-bold text-white mb-1">Welcome back</h1>
@@ -9,12 +20,15 @@ export default function LoginPage() {
         Sign in to continue building your resume
       </p>
 
-      <form action={loginAction} className="space-y-5">
+      {state.error && (
+        <div className="mb-5 rounded-xl bg-red-500/10 border border-red-500/20 px-4 py-3 text-sm text-red-400">
+          {state.error}
+        </div>
+      )}
+
+      <form action={formAction} className="space-y-5">
         <div>
-          <label
-            htmlFor="email"
-            className="block text-sm font-medium text-gray-300 mb-1.5"
-          >
+          <label htmlFor="email" className="block text-sm font-medium text-gray-300 mb-1.5">
             Email
           </label>
           <input
@@ -28,10 +42,7 @@ export default function LoginPage() {
           />
         </div>
         <div>
-          <label
-            htmlFor="password"
-            className="block text-sm font-medium text-gray-300 mb-1.5"
-          >
+          <label htmlFor="password" className="block text-sm font-medium text-gray-300 mb-1.5">
             Password
           </label>
           <input
@@ -46,18 +57,16 @@ export default function LoginPage() {
         </div>
         <button
           type="submit"
-          className="w-full rounded-xl bg-blue-600 py-3.5 text-sm font-semibold text-white hover:bg-blue-500 transition-all duration-200 shadow-lg shadow-blue-600/20"
+          disabled={pending}
+          className="w-full rounded-xl bg-blue-600 py-3.5 text-sm font-semibold text-white hover:bg-blue-500 transition-all duration-200 shadow-lg shadow-blue-600/20 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          Sign In
+          {pending ? "Signing in..." : "Sign In"}
         </button>
       </form>
 
       <p className="mt-6 text-center text-sm text-gray-400">
         Don&apos;t have an account?{" "}
-        <Link
-          href="/register"
-          className="text-blue-400 hover:text-blue-300 font-medium transition-colors"
-        >
+        <Link href="/register" className="text-blue-400 hover:text-blue-300 font-medium transition-colors">
           Sign up
         </Link>
       </p>

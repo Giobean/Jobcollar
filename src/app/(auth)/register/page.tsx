@@ -1,7 +1,18 @@
+"use client";
+
 import Link from "next/link";
 import { registerAction } from "@/app/actions/auth";
+import { useActionState } from "react";
 
 export default function RegisterPage() {
+  const [state, formAction, pending] = useActionState(
+    async (_prev: { error?: string }, formData: FormData) => {
+      const result = await registerAction(formData);
+      return result ?? {};
+    },
+    {}
+  );
+
   return (
     <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-8 md:p-10">
       <h1 className="text-2xl font-bold text-white mb-1">
@@ -11,12 +22,15 @@ export default function RegisterPage() {
         Start building your professional resume today
       </p>
 
-      <form action={registerAction} className="space-y-5">
+      {state.error && (
+        <div className="mb-5 rounded-xl bg-red-500/10 border border-red-500/20 px-4 py-3 text-sm text-red-400">
+          {state.error}
+        </div>
+      )}
+
+      <form action={formAction} className="space-y-5">
         <div>
-          <label
-            htmlFor="name"
-            className="block text-sm font-medium text-gray-300 mb-1.5"
-          >
+          <label htmlFor="name" className="block text-sm font-medium text-gray-300 mb-1.5">
             Full Name
           </label>
           <input
@@ -30,10 +44,7 @@ export default function RegisterPage() {
           />
         </div>
         <div>
-          <label
-            htmlFor="email"
-            className="block text-sm font-medium text-gray-300 mb-1.5"
-          >
+          <label htmlFor="email" className="block text-sm font-medium text-gray-300 mb-1.5">
             Email
           </label>
           <input
@@ -47,10 +58,7 @@ export default function RegisterPage() {
           />
         </div>
         <div>
-          <label
-            htmlFor="password"
-            className="block text-sm font-medium text-gray-300 mb-1.5"
-          >
+          <label htmlFor="password" className="block text-sm font-medium text-gray-300 mb-1.5">
             Password
           </label>
           <input
@@ -64,10 +72,7 @@ export default function RegisterPage() {
           />
         </div>
         <div>
-          <label
-            htmlFor="confirmPassword"
-            className="block text-sm font-medium text-gray-300 mb-1.5"
-          >
+          <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-300 mb-1.5">
             Confirm Password
           </label>
           <input
@@ -82,18 +87,16 @@ export default function RegisterPage() {
         </div>
         <button
           type="submit"
-          className="w-full rounded-xl bg-blue-600 py-3.5 text-sm font-semibold text-white hover:bg-blue-500 transition-all duration-200 shadow-lg shadow-blue-600/20"
+          disabled={pending}
+          className="w-full rounded-xl bg-blue-600 py-3.5 text-sm font-semibold text-white hover:bg-blue-500 transition-all duration-200 shadow-lg shadow-blue-600/20 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          Create Account
+          {pending ? "Creating account..." : "Create Account"}
         </button>
       </form>
 
       <p className="mt-6 text-center text-sm text-gray-400">
         Already have an account?{" "}
-        <Link
-          href="/login"
-          className="text-blue-400 hover:text-blue-300 font-medium transition-colors"
-        >
+        <Link href="/login" className="text-blue-400 hover:text-blue-300 font-medium transition-colors">
           Sign in
         </Link>
       </p>
