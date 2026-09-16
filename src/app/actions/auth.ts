@@ -46,7 +46,7 @@ export async function registerAction(formData: FormData): Promise<AuthResult> {
       },
     });
 
-    await createSession(user.id);
+    await createSession({ id: user.id, name: user.name, email: user.email });
   } catch (e) {
     console.error("Register error:", e);
     return { error: "Something went wrong. Please try again." };
@@ -74,7 +74,7 @@ export async function loginAction(formData: FormData): Promise<AuthResult> {
       return { error: "Invalid email or password" };
     }
 
-    await createSession(user.id);
+    await createSession({ id: user.id, name: user.name, email: user.email });
   } catch (e) {
     console.error("Login error:", e);
     return { error: "Something went wrong. Please try again." };

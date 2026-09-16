@@ -1,10 +1,20 @@
 import { cookies } from "next/headers";
 import { prisma } from "./prisma";
 import bcrypt from "bcryptjs";
-import crypto from "crypto";
+import { SignJWT, jwtVerify } from "jose";
 
-const SESSION_COOKIE = "session_token";
-const SESSION_MAX_AGE = 30 * 24 * 60 * 60; // 30 days in seconds
+const SESSION_COOKIE = "jc_session";
+const SESSION_MAX_AGE = 30 * 24 * 60 * 60; // 30 days
+
+const SECRET_KEY = new TextEncoder().encode(
+  process.env.SESSION_SECRET || "jobcollar-default-secret-change-in-production-k8x9"
+);
+
+export type SessionUser = {
+  id: string;
+  name: string;
+  email: string;
+};
 
 export async function hashPassword(password: string): Promise<string> {
   return bcrypt.hash(password, 12);
@@ -17,17 +27,20 @@ export async function verifyPassword(
   return bcrypt.compare(password, hash);
 }
 
-export async function createSession(userId: string): Promise<string> {
-  const token = crypto.randomBytes(32).toString("hex");
-  const expires = new Date(Date.now() + SESSION_MAX_AGE * 1000);
-
-  await prisma.session.create({
-    data: {
-      sessionToken: token,
-      userId,
-      expires,
-    },
-  });
+export async function createSession(user: {
+  id: string;
+  name: string | null;
+  email: string;
+}): Promise<void> {
+  const token = await new SignJWT({
+    userId: user.id,
+    name: user.name || "",
+    email: user.email,
+  })
+    .setProtectedHeader({ alg: "HS256" })
+    .setIssuedAt()
+    .setExpirationTime(`${SESSION_MAX_AGE}s`)
+    .sign(SECRET_KEY);
 
   const cookieStore = await cookies();
   cookieStore.set(SESSION_COOKIE, token, {
@@ -37,37 +50,49 @@ export async function createSession(userId: string): Promise<string> {
     maxAge: SESSION_MAX_AGE,
     path: "/",
   });
-
-  return token;
 }
 
-export async function getSession() {
+export async function getSession(): Promise<SessionUser | null> {
   const cookieStore = await cookies();
   const token = cookieStore.get(SESSION_COOKIE)?.value;
 
   if (!token) return null;
 
-  const session = await prisma.session.findUnique({
-    where: { sessionToken: token },
-    include: { user: true },
-  });
+  try {
+    const { payload } = await jwtVerify(token, SECRET_KEY);
+    const userId = payload.userId as string;
+    const name = (payload.name as string) || "";
+    const email = (payload.email as string) || "";
 
-  if (!session || session.expires < new Date()) {
-    if (session) {
-      await prisma.session.delete({ where: { id: session.id } });
-    }
+    if (!userId) return null;
+
+    return { id: userId, name, email };
+  } catch {
     return null;
   }
+}
 
-  return session.user;
+export async function getSessionWithDbUser() {
+  const session = await getSession();
+  if (!session) return null;
+
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: session.id },
+    });
+    return user;
+  } catch {
+    return session;
+  }
 }
 
 export async function destroySession() {
   const cookieStore = await cookies();
-  const token = cookieStore.get(SESSION_COOKIE)?.value;
-
-  if (token) {
-    await prisma.session.deleteMany({ where: { sessionToken: token } });
-    cookieStore.delete(SESSION_COOKIE);
-  }
+  cookieStore.set(SESSION_COOKIE, "", {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    maxAge: 0,
+    path: "/",
+  });
 }
