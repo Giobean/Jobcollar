@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowLeft, Check, Eye, Info, Play, ShieldCheck } from "lucide-react";
+import { ArrowLeft, Check, Info, Play, ShieldCheck } from "lucide-react";
 import { notFound } from "next/navigation";
 import { SiteFooter } from "@/components/creator-home";
 import { SiteHeader } from "@/components/site-header";

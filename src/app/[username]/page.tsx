@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Copy, Instagram, MapPin, Sparkles } from "lucide-react";
+import { Camera, Copy, MapPin, Sparkles } from "lucide-react";
 import { notFound } from "next/navigation";
 import { AdSpaceCard } from "@/components/ad-space-card";
 import { SiteFooter } from "@/components/creator-home";
@@ -23,7 +23,7 @@ export default async function ProfilePage({ params }: PageProps<"/[username]">) 
         <section className="profile-hero">
           <div className="shell profile-header">
             <div className="profile-avatar">{creator.creator.split(" ").map((part) => part[0]).join("")}</div>
-            <div><p className="verified"><Sparkles /> Creator profile</p><h1>{creator.creator}</h1><p>{creator.category} creator · Everyday sessions, gear, and life on four wheels.</p><span className="profile-meta"><MapPin /> Los Angeles, CA <b>·</b> <Instagram /> {formatViews(creator.averageViews)} average views*</span></div>
+            <div><p className="verified"><Sparkles /> Creator profile</p><h1>{creator.creator}</h1><p>{creator.category} creator · Everyday sessions, gear, and life on four wheels.</p><span className="profile-meta"><MapPin /> Los Angeles, CA <b>·</b> <Camera /> {formatViews(creator.averageViews)} average views*</span></div>
             <ProfileActions />
           </div>
         </section>
