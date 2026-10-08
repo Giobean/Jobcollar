@@ -15,6 +15,8 @@ const nav = [
   [WalletCards, "Earnings"], [UserRound, "Profile"],
 ] as const;
 
+export const dynamic = "force-dynamic";
+
 async function getApprovalState() {
   const fallback = {
     status: "approved" as CreatorApprovalStatus,

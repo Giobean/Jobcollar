@@ -5,6 +5,7 @@ import { AdminReviewActions } from "@/components/admin-review-actions";
 import { getAdminSession } from "@/lib/auth/admin";
 
 export const metadata: Metadata = { title: "Creator Review Queue" };
+export const dynamic = "force-dynamic";
 
 export default async function AdminCreatorsPage() {
   const session = await getAdminSession();

@@ -36,6 +36,7 @@ export function CreatorHome() {
               <div className="trust-row">
                 <span><Check /> You set the price</span>
                 <span><Check /> No video editing</span>
+                <span><Check /> Creator profiles reviewed</span>
                 <span><Check /> Stripe-secured payments</span>
               </div>
             </div>

@@ -12,6 +12,7 @@ export type ReviewSubmissionState = {
 export async function submitForReview(
   _previous: ReviewSubmissionState,
 ): Promise<ReviewSubmissionState> {
+  void _previous;
   if (!isSupabaseConfigured()) {
     return {
       success: false,
