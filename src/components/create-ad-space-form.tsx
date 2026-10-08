@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, Camera, Check, Info, Ruler, Sparkles } from "lucide-react";
+import { ArrowRight, Camera, Check, Info, Ruler, ShieldCheck, Sparkles } from "lucide-react";
 import { useMemo, useState } from "react";
 import { calculateRecommendedPrice } from "@/lib/data";
 
@@ -14,7 +14,7 @@ export function CreateAdSpaceForm() {
 
   return (
     <div className="create-page shell">
-      <header className="create-heading"><p className="kicker">Create inventory</p><h1>Create an Ad Space</h1><p>Define one exact physical surface. You can add more surfaces to the same object later.</p></header>
+      <header className="create-heading"><p className="kicker">Create inventory</p><h1>Create an Ad Space</h1><p>Define one exact physical surface. You can add more surfaces to the same object later.</p><div className="review-trust-note"><ShieldCheck aria-hidden="true" /><span><strong>Built for marketplace trust.</strong> CreatorAdSpace reviews creator profiles before their Ad Spaces become publicly available. You can keep building while we review.</span></div></header>
       <div className="create-progress" aria-label="Step 1 of 3"><span className="active">1 <b>Object & surface</b></span><span>2 <b>Price & videos</b></span><span>3 <b>Publish</b></span></div>
       <form className="create-grid" onSubmit={(event) => { event.preventDefault(); setSaved(true); }}>
         <div className="create-card">
@@ -35,11 +35,11 @@ export function CreateAdSpaceForm() {
           </fieldset>
         </div>
         <aside className="create-preview">
-          <p className="kicker">Listing preview</p><div className="preview-object"><Camera /><div><span>Available Ad Space</span><strong>{width}&quot; × {height}&quot;</strong></div></div>
+          <p className="kicker">Listing preview</p><span className="draft-badge">◷ Draft — not visible to advertisers</span><div className="preview-object"><Camera /><div><span>Available Ad Space</span><strong>{width}&quot; × {height}&quot;</strong></div></div>
           <h2>Black Skate Cap</h2><p>Front panel</p><dl><div><dt>Videos</dt><dd>{videos}</dd></div><div><dt>Your price</dt><dd>${price}</dd></div><div><dt>Recommended</dt><dd>${recommended}</dd></div></dl>
           <div className="recommendation-note"><Info /><span>The rectangle is an approximate placement guide, not exact physical scale.</span></div>
           <button className="button button-dark full-button" type="submit">Save & continue <ArrowRight /></button>
-          <p className="status-message" role="status">{saved && <><Check /> Ad Space saved. Ready to publish.</>}</p>
+          <p className="status-message" role="status">{saved && <><Check /> Draft saved. Submit your creator profile for review when ready.</>}</p>
         </aside>
       </form>
     </div>

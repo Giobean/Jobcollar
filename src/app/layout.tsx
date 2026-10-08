@@ -26,6 +26,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html
       lang="en"
       className={`${bodyFont.variable} ${displayFont.variable}`}
+      data-scroll-behavior="smooth"
     >
       <body>{children}</body>
     </html>

@@ -3,7 +3,7 @@
 import { SlidersHorizontal, X } from "lucide-react";
 import { useMemo, useState } from "react";
 import { AdSpaceCard } from "./ad-space-card";
-import { adSpaces } from "@/lib/data";
+import { publicAdSpaces } from "@/lib/data";
 
 export function MarketplaceGrid() {
   const [object, setObject] = useState("All objects");
@@ -12,7 +12,7 @@ export function MarketplaceGrid() {
 
   const filtered = useMemo(
     () =>
-      adSpaces.filter(
+      publicAdSpaces.filter(
         (space) =>
           (object === "All objects" || space.objectType === object) &&
           (platform === "All platforms" || space.platform === platform) &&

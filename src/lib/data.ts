@@ -1,3 +1,9 @@
+export type CreatorApprovalStatus =
+  | "pending"
+  | "approved"
+  | "rejected"
+  | "suspended";
+
 export type AdSpace = {
   id: string;
   creator: string;
@@ -18,6 +24,8 @@ export type AdSpace = {
   accent: string;
   description: string;
   availability: "Available" | "Selling fast";
+  creatorApprovalStatus: CreatorApprovalStatus;
+  status: "available" | "pending" | "sold" | "paused";
 };
 
 export const adSpaces: AdSpace[] = [
@@ -44,6 +52,8 @@ export const adSpaces: AdSpace[] = [
     description:
       "A high-motion placement on the underside of my everyday street deck. It is clearly visible in setup shots, tricks, and board close-ups.",
     availability: "Available",
+    creatorApprovalStatus: "approved",
+    status: "available",
   },
   {
     id: "hoodie-sleeve",
@@ -67,6 +77,8 @@ export const adSpaces: AdSpace[] = [
     description:
       "A vertical sleeve placement that stays visible during styling videos and outfit transitions.",
     availability: "Selling fast",
+    creatorApprovalStatus: "approved",
+    status: "available",
   },
   {
     id: "laptop-lid",
@@ -90,6 +102,8 @@ export const adSpaces: AdSpace[] = [
     description:
       "A clean laptop-lid placement seen in desk tours, stream intros, and behind-the-scenes clips.",
     availability: "Available",
+    creatorApprovalStatus: "approved",
+    status: "available",
   },
   {
     id: "bottle-center",
@@ -113,6 +127,8 @@ export const adSpaces: AdSpace[] = [
     description:
       "My always-on-desk bottle, featured naturally in routines, work sessions, and travel prep.",
     availability: "Available",
+    creatorApprovalStatus: "approved",
+    status: "available",
   },
   {
     id: "hat-front",
@@ -136,6 +152,8 @@ export const adSpaces: AdSpace[] = [
     description:
       "Front-and-center cap placement worn in every skate session and talking-to-camera intro.",
     availability: "Available",
+    creatorApprovalStatus: "approved",
+    status: "available",
   },
   {
     id: "shirt-chest",
@@ -159,14 +177,74 @@ export const adSpaces: AdSpace[] = [
     description:
       "A classic chest placement for outfit reels and casual styling content.",
     availability: "Available",
+    creatorApprovalStatus: "approved",
+    status: "available",
+  },
+  {
+    id: "camera-strap",
+    creator: "Taylor Brooks",
+    username: "taylor",
+    category: "Photography",
+    platform: "YouTube",
+    objectName: "Camera Strap",
+    objectType: "Equipment",
+    placement: "Shoulder section",
+    width: 4,
+    height: 1.5,
+    videos: 5,
+    averageViews: 42000,
+    price: 110,
+    recommendedPrice: 105,
+    image:
+      "https://images.unsplash.com/photo-1452780212940-6f5c0d14d848?auto=format&fit=crop&w=1200&q=85",
+    imageAlt: "Camera and strap resting on a wooden table",
+    accent: "#d8ff5f",
+    description:
+      "A draft camera-strap placement for studio and street photography videos.",
+    availability: "Available",
+    creatorApprovalStatus: "pending",
+    status: "available",
   },
 ];
 
 export const formatViews = (value: number) =>
   value >= 1000 ? `${Math.round(value / 1000)}K` : String(value);
 
+export const publicAdSpaces = adSpaces.filter(
+  (space) =>
+    space.creatorApprovalStatus === "approved" && space.status === "available",
+);
+
 export const getAdSpace = (id: string) =>
-  adSpaces.find((space) => space.id === id) ?? adSpaces[0];
+  adSpaces.find((space) => space.id === id);
+
+export type PurchaseEligibility =
+  | { allowed: true }
+  | {
+      allowed: false;
+      reason:
+        | "not_found"
+        | "creator_not_approved"
+        | "listing_unavailable";
+    };
+
+export function evaluatePurchasability(
+  space: Pick<AdSpace, "creatorApprovalStatus" | "status"> | undefined,
+): PurchaseEligibility {
+  if (!space) return { allowed: false, reason: "not_found" };
+  if (space.creatorApprovalStatus !== "approved") {
+    return { allowed: false, reason: "creator_not_approved" };
+  }
+  if (space.status !== "available") {
+    return { allowed: false, reason: "listing_unavailable" };
+  }
+  return { allowed: true };
+}
+
+export const getPurchasableAdSpace = (id: string) => {
+  const space = getAdSpace(id);
+  return evaluatePurchasability(space).allowed ? space : undefined;
+};
 
 export const PLATFORM_FEE_RATE = Number(
   process.env.PLATFORM_FEE_PERCENT ?? 10,
