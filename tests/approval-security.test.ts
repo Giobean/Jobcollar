@@ -76,6 +76,7 @@ test("checkout and moderation entry points repeat server-side authorization", as
     "utf8",
   );
   assert.match(checkout, /evaluatePurchasability\(demoSpace\)/);
+  assert.match(checkout, /STRIPE_SECRET_KEY && !hasSupabase/);
   assert.match(checkout, /\.eq\("profiles\.approval_status", "approved"\)/);
   assert.match(checkout, /\.eq\("status", "available"\)/);
   assert.match(checkout, /creator_price/);

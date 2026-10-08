@@ -30,6 +30,16 @@ export async function POST(request: Request) {
     Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL) &&
     Boolean(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
 
+  if (process.env.STRIPE_SECRET_KEY && !hasSupabase) {
+    return NextResponse.json(
+      {
+        message:
+          "Checkout is unavailable until Supabase authentication is configured.",
+      },
+      { status: 503 },
+    );
+  }
+
   if (hasSupabase) {
     const supabase = await createSupabaseServerClient();
     const {
