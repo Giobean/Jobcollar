@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Camera, Copy, MapPin, Sparkles } from "lucide-react";
+import { Camera, Clock3, Copy, MapPin, ShieldCheck, Sparkles } from "lucide-react";
 import { notFound } from "next/navigation";
 import { AdSpaceCard } from "@/components/ad-space-card";
 import { SiteFooter } from "@/components/creator-home";
@@ -8,7 +8,9 @@ import { ProfileActions } from "@/components/profile-actions";
 import { adSpaces, formatViews } from "@/lib/data";
 
 export function generateStaticParams() {
-  return ["alex", "maya", "jordan", "sam"].map((username) => ({ username }));
+  return [...new Set(adSpaces.map(({ username }) => username))].map((username) => ({
+    username,
+  }));
 }
 
 export default async function ProfilePage({ params }: PageProps<"/[username]">) {
@@ -16,6 +18,32 @@ export default async function ProfilePage({ params }: PageProps<"/[username]">) 
   const listings = adSpaces.filter((space) => space.username === username);
   if (!listings.length) notFound();
   const creator = listings[0];
+  if (creator.creatorApprovalStatus !== "approved") {
+    const message =
+      creator.creatorApprovalStatus === "pending"
+        ? `${creator.creator}'s CreatorAdSpace profile is currently being reviewed.`
+        : "This creator profile is not currently available.";
+    return (
+      <>
+        <SiteHeader />
+        <main id="main-content" className="private-profile shell">
+          <span className="private-profile-icon" aria-hidden="true">
+            {creator.creatorApprovalStatus === "pending" ? <Clock3 /> : <ShieldCheck />}
+          </span>
+          <p className="kicker">Creator profile</p>
+          <h1>{message}</h1>
+          <p>
+            No inventory is public while this profile is under review. Please
+            check back soon.
+          </p>
+          <Link className="button button-dark" href="/marketplace">
+            Explore approved creators
+          </Link>
+        </main>
+        <SiteFooter />
+      </>
+    );
+  }
   return (
     <>
       <SiteHeader />

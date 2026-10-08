@@ -4,16 +4,16 @@ import { ArrowLeft, Check, Info, Play, ShieldCheck } from "lucide-react";
 import { notFound } from "next/navigation";
 import { SiteFooter } from "@/components/creator-home";
 import { SiteHeader } from "@/components/site-header";
-import { adSpaces, formatViews, getAdSpace } from "@/lib/data";
+import { formatViews, getPurchasableAdSpace, publicAdSpaces } from "@/lib/data";
 
 export function generateStaticParams() {
-  return adSpaces.map(({ id }) => ({ id }));
+  return publicAdSpaces.map(({ id }) => ({ id }));
 }
 
 export default async function AdSpaceDetail({ params }: PageProps<"/spaces/[id]">) {
   const { id } = await params;
-  if (!adSpaces.some((space) => space.id === id)) notFound();
-  const space = getAdSpace(id);
+  const space = getPurchasableAdSpace(id);
+  if (!space) notFound();
   return (
     <>
       <SiteHeader />

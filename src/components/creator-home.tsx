@@ -6,7 +6,7 @@ import {
 } from "lucide-react";
 import { AdSpaceCard } from "@/components/ad-space-card";
 import { SiteHeader } from "@/components/site-header";
-import { adSpaces } from "@/lib/data";
+import { publicAdSpaces } from "@/lib/data";
 
 export function CreatorHome() {
   const steps = [
@@ -64,7 +64,7 @@ export function CreatorHome() {
             <div><p className="kicker">Available now</p><h2 id="featured-title">Physical space, real attention.</h2></div>
             <Link className="text-link" href="/marketplace">Browse all spaces <ArrowRight /></Link>
           </div>
-          <div className="card-grid">{adSpaces.slice(0, 3).map((space) => <AdSpaceCard key={space.id} space={space} />)}</div>
+          <div className="card-grid">{publicAdSpaces.slice(0, 3).map((space) => <AdSpaceCard key={space.id} space={space} />)}</div>
         </section>
 
         <section className="how-section" aria-labelledby="how-title">
